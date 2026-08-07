@@ -5,7 +5,7 @@
       <view class="user-row">
         <image class="avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" @click="onEditProfile" />
         <view class="user-info">
-          <view class="name-line">
+          <view class="name-line" @click="onEditProfile">
             <text class="user-name">{{ communityStore.currentUser.nickname }}</text>
             <view class="verified-tag">
               <text class="shield-icon">🛡️</text>
@@ -48,10 +48,10 @@
       </view>
     </view>
 
-    <!-- 主体功能菜单区 -->
-    <scroll-view scroll-y class="mine-body">
+    <!-- 3. 主体功能菜单区 -->
+    <scroll-view scroll-y class="mine-scroll-body">
       
-      <!-- 3. 核心社区房产与资产管理组 -->
+      <!-- 核心社区房产与资产管理组 -->
       <view class="menu-group">
         <text class="group-title">社区与房产管理</text>
         
@@ -95,7 +95,7 @@
           <text class="paid-feature-tag">辅助定制服务</text>
         </view>
         
-        <view class="menu-item" @click="onFeatureReserved('智能门禁与钥匙')">
+        <view class="menu-item" @click="onFeatureReserved('手机门禁与蓝牙开门')">
           <view class="menu-left">
             <text class="menu-icon">🔑</text>
             <text class="menu-label">手机门禁与蓝牙开门</text>
@@ -106,7 +106,7 @@
           </view>
         </view>
 
-        <view class="menu-item" @click="onFeatureReserved('物业费缴纳')">
+        <view class="menu-item" @click="onFeatureReserved('物业费与停车费缴纳')">
           <view class="menu-left">
             <text class="menu-icon">💳</text>
             <text class="menu-label">物业费与停车费缴纳</text>
@@ -117,7 +117,7 @@
           </view>
         </view>
 
-        <view class="menu-item" @click="onFeatureReserved('报修记录跟踪')">
+        <view class="menu-item" @click="onFeatureReserved('公区工单与报修记录')">
           <view class="menu-left">
             <text class="menu-icon">🛠️</text>
             <text class="menu-label">公区工单与报修记录</text>
@@ -186,7 +186,7 @@ onMounted(() => {
 
 // 修改资料
 const onEditProfile = () => {
-  uni.showToast({ title: '修改头像昵称...', icon: 'none' })
+  uni.showToast({ title: '修改个人资料/头像...', icon: 'none' })
 }
 
 // 切换房产/小区
@@ -201,7 +201,11 @@ const onSwitchProperty = () => {
 
 // 查看我的发帖
 const onNavToMyPosts = (type) => {
-  uni.showToast({ title: '查看发帖记录...', icon: 'none' })
+  uni.showModal({
+    title: '📝 我的发帖与回复记录',
+    content: '您在【云彩之城】共发布了 12 条动态，包括 3 条邻里求助与 5 条闲置面交。',
+    showCancel: false
+  })
 }
 
 // 查看我的收藏
@@ -212,22 +216,26 @@ const onNavToMyFav = () => {
 // 房产管理
 const onNavToProperty = () => {
   uni.showModal({
-    title: '🏡 我的房产认证',
-    content: `当前绑定：${communityStore.currentCommunity.name} ${communityStore.currentUser.building}${communityStore.currentUser.room}\n身份：业主认证`,
+    title: '🏢 我的房产认证',
+    content: `当前绑定：${communityStore.currentCommunity.name} ${communityStore.currentUser.building}${communityStore.currentUser.room}\n身份状态：业主认证`,
     showCancel: false
   })
 }
 
 // 消息中心
 const onNavToNotice = () => {
-  uni.showToast({ title: '打开消息通知...', icon: 'none' })
+  uni.showModal({
+    title: '🔔 消息通知中心',
+    content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区公告：新塘街道彩虹社区正式成立通知',
+    showCancel: false
+  })
 }
 
 // 预留辅助收费功能接口点击提示
 const onFeatureReserved = (featureName) => {
   uni.showModal({
     title: `⚙️ ${featureName}`,
-    content: `【${featureName}】为辅助定制功能（后期增值收费项目），目前接口已全量预留，可对接小区物业门禁与缴费系统！`,
+    content: `【${featureName}】为辅助定制功能（后期增值收费项目），目前接口已全量预留，可随时对接小区物业门禁与缴费系统！`,
     showCancel: false
   })
 }
@@ -236,7 +244,7 @@ const onFeatureReserved = (featureName) => {
 const onInviteNeighbor = () => {
   uni.showModal({
     title: '💌 邀请邻居入驻',
-    content: '感谢您邀请邻居加入【云彩之城】社区交流圈！微信分享小程序码即可邀请邻居完成房产认证。',
+    content: '感谢您邀请邻居加入【云彩之城】社区交流圈！转发分享小程序即可邀请邻居完成房产认证。',
     showCancel: false
   })
 }
@@ -254,17 +262,18 @@ const onCallProperty = () => {
 
 // 反馈
 const onFeedback = () => {
-  uni.showToast({ title: '提交意见反馈...', icon: 'none' })
+  uni.showToast({ title: '感谢您的意见反馈！', icon: 'none' })
 }
 </script>
 
 <style scoped>
 .mine-container {
-  min-height: 100vh;
+  height: 100vh;
   background-color: #F0F7F4;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* 1. 顶部用户 Profile 卡片 Header */
@@ -276,6 +285,7 @@ const onFeedback = () => {
   border-radius: 0 0 28px 28px;
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
   color: #FFFFFF;
+  flex-shrink: 0;
 }
 
 .user-row {
@@ -396,8 +406,9 @@ const onFeedback = () => {
 }
 
 /* 主体功能分组区 */
-.mine-body {
+.mine-scroll-body {
   flex: 1;
+  height: 0;
   padding: 16px;
   box-sizing: border-box;
 }
@@ -442,7 +453,7 @@ const onFeedback = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid #F9FAFB;
 }
 
@@ -492,6 +503,6 @@ const onFeedback = () => {
 }
 
 .bottom-space {
-  height: 60px;
+  height: 80px;
 }
 </style>
