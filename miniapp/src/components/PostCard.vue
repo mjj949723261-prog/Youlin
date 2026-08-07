@@ -1,5 +1,5 @@
 <template>
-  <view class="post-card">
+  <view class="post-card" @click="onCardClick">
     <!-- 发帖人基本信息 -->
     <view class="user-row">
       <view class="user-info">
@@ -61,7 +61,13 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['click'])
+
 const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
+
+const onCardClick = () => {
+  emit('click')
+}
 
 const getRoleTagClass = (roleType) => {
   if (roleType === 'GOV') return 'tag-gov'
