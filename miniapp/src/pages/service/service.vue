@@ -1,13 +1,12 @@
 <template>
   <view class="service-container">
-    <!-- 1. 顶部服务大厅 Header -->
+    <!-- 1. 顶部服务大厅 Header (已移除右上角街道社区标签) -->
     <view class="service-header-card" :style="{ paddingTop: (statusBarHeight + 16) + 'px' }">
       <view class="header-top">
         <view class="location-box">
           <text class="location-icon">📍</text>
           <text class="location-name">{{ communityStore.currentCommunity.name }} · 服务大厅</text>
         </view>
-        <text class="sub-district-tag">新塘街道彩虹社区</text>
       </view>
 
       <view class="weather-strip">
@@ -46,7 +45,6 @@
             <view class="icon-wrapper orange">
               <text class="grid-icon">🛠️</text>
             </view>
-
             <text class="grid-label">在线报修</text>
             <text class="grid-sub">管家响应</text>
           </view>
@@ -104,7 +102,7 @@
         </view>
       </view>
 
-      <!-- 4. 周边邻里商圈与家政便民区 (未来的商户入驻收费变现入口) -->
+      <!-- 4. 周边邻里商圈与家政便民区 -->
       <view class="section-card">
         <view class="section-header">
           <text class="section-title">周边便民与优选商家</text>
@@ -157,7 +155,6 @@ onMounted(() => {
   }
 })
 
-// 服务接口点击处理
 const onServiceClick = (title, desc) => {
   uni.showModal({
     title: `🛠️ ${title}`,
@@ -177,7 +174,6 @@ const onServiceClick = (title, desc) => {
   overflow: hidden;
 }
 
-/* 1. 顶部 Header */
 .service-header-card {
   background: linear-gradient(180deg, #10B981 0%, #059669 100%);
   padding: 16px 20px 20px 20px;
@@ -210,15 +206,6 @@ const onServiceClick = (title, desc) => {
   color: #FFFFFF;
 }
 
-.sub-district-tag {
-  font-size: 11px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 3px 8px;
-  border-radius: 12px;
-  color: #E6F4EA;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
 .weather-strip {
   background: rgba(0, 0, 0, 0.12);
   padding: 6px 12px;
@@ -230,7 +217,6 @@ const onServiceClick = (title, desc) => {
   color: #E6F4EA;
 }
 
-/* 2. 滚动区 */
 .service-body {
   flex: 1;
   height: 0;
@@ -274,7 +260,6 @@ const onServiceClick = (title, desc) => {
   font-weight: 600;
 }
 
-/* 金刚区 */
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -318,7 +303,6 @@ const onServiceClick = (title, desc) => {
   color: #9CA3AF;
 }
 
-/* 列表服务行 */
 .list-services {
   display: flex;
   flex-direction: column;
@@ -366,7 +350,6 @@ const onServiceClick = (title, desc) => {
   color: #9CA3AF;
 }
 
-/* 商家网格 */
 .merchant-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
