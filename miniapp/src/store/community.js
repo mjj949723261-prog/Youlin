@@ -1,11 +1,11 @@
 import { reactive, ref } from 'vue'
 
-// 当前所在小区与社区信息
+// 当前所在小区与街道社区信息
 export const currentCommunity = reactive({
   id: 'comm_001',
   name: '云彩之城',
   subDistrictId: 'sub_101',
-  subDistrictName: '翠竹社区'
+  subDistrictName: '新塘街道彩虹社区'
 })
 
 // 当前用户身份状态
@@ -19,7 +19,7 @@ export const currentUser = reactive({
   roleTag: '本小区住户'
 })
 
-// 当前支持的房产/小区列表（多租户/多房产）
+// 当前支持的房产/小区列表
 export const myCommunities = ref([
   {
     id: 'comm_001',

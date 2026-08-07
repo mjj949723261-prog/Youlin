@@ -18,10 +18,10 @@
         <text class="banner-sub">今天也有温暖的邻里故事</text>
       </view>
 
-      <!-- 公告实时广播小条 -->
+      <!-- 公告实时广播小条 (已更新为：新塘街道彩虹社区成立相关通知) -->
       <view class="banner-notice-strip" @click="onViewNotice">
         <text class="badge-tag">📢 公告</text>
-        <text class="notice-text">8月8日翠竹街道防汛隐患排查通知...</text>
+        <text class="notice-text">新塘街道彩虹社区成立相关通知...</text>
         <text class="arrow">›</text>
       </view>
     </view>
@@ -228,10 +228,11 @@ const onSwitchCommunity = () => {
   })
 }
 
+// 查看新塘街道彩虹社区通知
 const onViewNotice = () => {
   uni.showModal({
-    title: '📢 翠竹街道社区防汛通告',
-    content: '预计本周末有强降雨，请各位业主检查关好阳台窗户，清理阳台花盆，注意出行安全。',
+    title: '📢 新塘街道彩虹社区成立相关通知',
+    content: '热烈祝贺新塘街道彩虹社区正式成立！为更好地服务广大居民与云彩之城业主，彩虹社区将进一步优化公共服务与邻里交流平台。',
     showCancel: false
   })
 }
