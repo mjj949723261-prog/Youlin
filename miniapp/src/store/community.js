@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 // 当前所在小区与社区信息
 export const currentCommunity = reactive({
   id: 'comm_001',
-  name: '云栖花园',
+  name: '云彩之城',
   subDistrictId: 'sub_101',
   subDistrictName: '翠竹社区'
 })
@@ -23,13 +23,13 @@ export const currentUser = reactive({
 export const myCommunities = ref([
   {
     id: 'comm_001',
-    name: '云栖花园',
+    name: '云彩之城',
     building: '5栋302',
     roleTag: '自住·已认证'
   },
   {
     id: 'comm_002',
-    name: '阳光花园 1期',
+    name: '云彩之城 2期',
     building: '12栋501',
     roleTag: '出租·已认证'
   }

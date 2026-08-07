@@ -47,7 +47,7 @@
       </view>
     </view>
 
-    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 (点击直接进入帖子详情页) -->
+    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 -->
     <view class="feed-list">
       <block v-if="filteredPosts.length > 0">
         <PostCard
@@ -164,7 +164,7 @@ const allPosts = ref([
     roleType: 'RESIDENT',
     categoryKey: 'RENT',
     publishTime: '40分钟前',
-    content: '阳光花园 2期 3号楼精装两居室业主直租，免中介费！首次出租家电齐全，看房方便。',
+    content: '云彩之城 2期 3号楼精装两居室业主直租，免中介费！首次出租家电齐全，看房方便。',
     singleImg: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=300',
     tagName: '房屋出租',
     tagType: 'RENT'
@@ -242,7 +242,6 @@ const onPublishClick = () => {
   })
 }
 
-// 点击帖子直接进入详情页
 const onPostDetail = (id) => {
   uni.navigateTo({
     url: '/pages/detail/detail?id=' + id

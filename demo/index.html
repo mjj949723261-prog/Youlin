@@ -3,19 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智慧社区小程序 - 悦邻里高保真原型 (精简3项TabBar)</title>
+  <title>智慧社区小程序 - 云彩之城高保真原型</title>
   <style>
     :root {
-      --primary-color: #10B981; /* 品牌翡翠绿 */
+      --primary-color: #10B981;
       --primary-light: #ECFDF5;
       --text-main: #111827;
       --text-sub: #6B7280;
       --bg-page: #F0F7F4;
       --card-bg: #FFFFFF;
       --border-color: #F1F5F9;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 20px;
     }
 
     * {
@@ -23,7 +20,6 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
-      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -313,12 +309,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 28px;
+      font-weight: 300;
       cursor: pointer;
       z-index: 99;
     }
 
-    /* 底栏 TabBar - 3项精简与图标设计 */
     .tab-bar {
       height: 60px;
       background: #FFFFFF;
@@ -355,7 +351,6 @@
       fill: var(--primary-color);
     }
 
-    /* 纯文字侧滑板块抽屉 */
     .drawer-mask {
       position: absolute;
       top: 0;
@@ -503,12 +498,12 @@
       <div class="user-avatar" style="background:#059669; color:#FFF; display:flex; align-items:center; justify-content:center; font-weight:700;">张</div>
       <div class="community-selector">
         <span class="location-icon">📍</span>
-        <span class="community-name">云栖花园</span>
+        <span class="community-name">云彩之城</span>
       </div>
     </div>
 
     <div class="banner-card">
-      <span class="banner-title">早上好，云栖花园</span>
+      <span class="banner-title">早上好，云彩之城</span>
       <span class="banner-sub">今天也有温暖的邻里故事</span>
       <div class="banner-notice-strip">
         <span class="badge-tag">📢 公告</span>
@@ -564,11 +559,9 @@
       </div>
     </div>
 
-    <div class="fab-post-btn">✏️</div>
+    <div class="fab-post-btn">+</div>
 
-    <!-- 底栏 TabBar: 精简为 3 个核心 Tab (带有高质感矢量图标) -->
     <div class="tab-bar">
-      <!-- 1. 首页 (当前选中) -->
       <div class="tab-item active">
         <svg class="tab-icon-svg" viewBox="0 0 24 24">
           <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V19a2 2 0 002 2h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a2 2 0 002-2v-8.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
@@ -576,7 +569,6 @@
         <span>首页</span>
       </div>
 
-      <!-- 2. 服务 -->
       <div class="tab-item">
         <svg class="tab-icon-svg" viewBox="0 0 24 24">
           <path d="M19.435 15.403l-4.839-4.839a.996.996 0 00-.707-.293h-.586l-2-2v-.586a1 1 0 00-.293-.707L6.17 2.139a1 1 0 00-1.414 0l-2.618 2.618a1 1 0 000 1.414l4.839 4.839c.188.188.442.293.707.293h.586l2 2v.586c0 .265.105.52.293.707l4.839 4.839a1 1 0 001.414 0l2.618-2.618a1 1 0 000-1.414z"/>
@@ -584,7 +576,6 @@
         <span>服务</span>
       </div>
 
-      <!-- 3. 我的 -->
       <div class="tab-item">
         <svg class="tab-icon-svg" viewBox="0 0 24 24">
           <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
@@ -593,7 +584,6 @@
       </div>
     </div>
 
-    <!-- 侧滑板块抽屉 -->
     <div class="drawer-mask" id="drawerMask" onclick="toggleDrawer(false)"></div>
     <div class="drawer-panel" id="drawerPanel">
       <div class="drawer-header">
