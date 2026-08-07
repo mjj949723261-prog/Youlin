@@ -1,16 +1,22 @@
 <template>
   <view class="detail-container">
-    <!-- 1. 顶部自定义导航 -->
-    <view class="nav-bar">
-      <view class="back-btn-box" @click="onBack">
-        <text class="back-icon">‹</text>
+    <!-- 1. 常驻固定在最顶部的 Navigation Header (不随列表滑动) -->
+    <view class="fixed-nav-bar" :style="{ paddingTop: statusBarHeight + 'px' }">
+      <view class="header-inner">
+        <view class="back-btn-box" @click="onBack">
+          <text class="back-icon">‹</text>
+        </view>
+        <text class="page-title">帖子详情</text>
+        <view class="nav-placeholder"></view>
       </view>
-      <text class="page-title">帖子详情</text>
-      <view class="nav-placeholder"></view>
     </view>
 
-    <!-- 2. 可滚动的主体区 -->
-    <scroll-view scroll-y class="detail-body">
+    <!-- 2. 可平滑滚动的主体列表区 (顶部留出 Header 避让距离) -->
+    <scroll-view
+      scroll-y
+      class="detail-body"
+      :style="{ paddingTop: (statusBarHeight + 48) + 'px' }"
+    >
       
       <!-- 主发帖卡片 (楼主) -->
       <view class="main-post-card">
@@ -43,7 +49,7 @@
             />
           </view>
 
-          <!-- 朋友圈规则 2：2张 或 4张图片 (双列并排正方形网格 110px * 110px) -->
+          <!-- 朋友圈规则 2：2张 或 4张图片 (强制左右横向并排正方形 110px * 110px) -->
           <view v-else-if="post.images.length === 2 || post.images.length === 4" class="moment-grid-2col">
             <image
               v-for="(img, idx) in post.images"
@@ -193,9 +199,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
 
+const statusBarHeight = ref(20)
 const inputContent = ref('')
 const replyTargetComment = ref(null)
 const replyTargetUser = ref('')
@@ -260,6 +267,13 @@ const commentList = ref([
 
 const canSend = computed(() => {
   return inputContent.value.trim().length > 0 || commentMedia.value.path !== ''
+})
+
+onMounted(() => {
+  const sysInfo = uni.getSystemInfoSync()
+  if (sysInfo.statusBarHeight) {
+    statusBarHeight.value = sysInfo.statusBarHeight
+  }
 })
 
 const onBack = () => {
@@ -373,13 +387,23 @@ const onSendComment = () => {
   position: relative;
 }
 
-.nav-bar {
-  padding: 44px 16px 12px 16px;
+/* 1. 常驻固定顶部 Header (固定不随列表滑动) */
+.fixed-nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   background-color: #FFFFFF;
+  z-index: 999;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.header-inner {
+  height: 48px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #F1F5F9;
 }
 
 .back-btn-box {
@@ -407,6 +431,7 @@ const onSendComment = () => {
   width: 36px;
 }
 
+/* 2. 列表可滚动主体区 */
 .detail-body {
   flex: 1;
   padding: 16px;
@@ -484,12 +509,11 @@ const onSendComment = () => {
   line-height: 1.7;
 }
 
-/* 微信朋友圈媒体显示规范 (未点开时) */
+/* 微信朋友圈媒体显示规范 */
 .moment-media-box {
   margin-bottom: 14px;
 }
 
-/* 规则 1: 朋友圈单张图片 (自适应宽度，高度上限220px，不强制正方形) */
 .single-image-wrapper {
   max-width: 70%;
 }
@@ -502,37 +526,38 @@ const onSendComment = () => {
   display: block;
 }
 
-/* 规则 2: 朋友圈 2 张或 4 张图片 (并排双列正方形卡片 110px × 110px，绝不拉爆上下) */
+/* 规则：两张图/四张图 横向并排双列 (用强加 !important 彻底覆盖微信小程序原生的 image 默认宽度) */
 .moment-grid-2col {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: 230px;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  width: 230px !important;
 }
 
 .moment-square-img-2col {
-  width: 110px;
-  height: 110px;
-  border-radius: 10px;
-  flex-shrink: 0;
+  width: 108px !important;
+  height: 108px !important;
+  border-radius: 10px !important;
+  flex-shrink: 0 !important;
 }
 
-/* 规则 3: 朋友圈 3张 / 5~9张图片 (三列标准九宫格正方形 84px × 84px) */
+/* 三列九宫格 */
 .moment-grid-3col {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: 270px;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  width: 270px !important;
 }
 
 .moment-square-img-3col {
-  width: 84px;
-  height: 84px;
-  border-radius: 8px;
-  flex-shrink: 0;
+  width: 84px !important;
+  height: 84px !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
 }
 
-/* 规则 4: 朋友圈未点开时的视频卡片 */
 .moment-video-box {
   margin-bottom: 14px;
   width: 70%;
@@ -614,7 +639,6 @@ const onSendComment = () => {
   color: #DC2626;
 }
 
-/* 评论区 */
 .comments-section {
   background: #FFFFFF;
   border-radius: 20px;
