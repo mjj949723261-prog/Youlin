@@ -31,20 +31,56 @@
           <text class="content-text">{{ post.content }}</text>
         </view>
 
-        <!-- 媒体展示 (九宫格图片 / 视频) -->
-        <view v-if="post.images && post.images.length > 0" class="post-media-grid">
-          <image
-            v-for="(img, idx) in post.images"
-            :key="idx"
-            class="media-img"
-            :src="img"
-            mode="aspectFill"
-            @click="previewPostImages(idx)"
-          />
+        <!-- 按照微信朋友圈规则展示图片 (未点开时) -->
+        <view v-if="post.images && post.images.length > 0" class="moment-media-box">
+          <!-- 规则 A：单张图片 (自适应显示，限制最大宽高，不强制正方形) -->
+          <view v-if="post.images.length === 1" class="single-image-wrapper">
+            <image
+              class="moment-single-img"
+              :src="post.images[0]"
+              mode="aspectFill"
+              @click="previewPostImages(0)"
+            />
+          </view>
+
+          <!-- 规则 B：4 张图片 (2×2 朋友圈网格) -->
+          <view v-else-if="post.images.length === 4" class="moment-grid-2x2">
+            <image
+              v-for="(img, idx) in post.images"
+              :key="idx"
+              class="moment-grid-img"
+              :src="img"
+              mode="aspectFill"
+              @click="previewPostImages(idx)"
+            />
+          </view>
+
+          <!-- 规则 C：2/3/5~9 张图片 (标准 3 列朋友圈九宫格) -->
+          <view v-else class="moment-grid-3col">
+            <image
+              v-for="(img, idx) in post.images"
+              :key="idx"
+              class="moment-grid-img"
+              :src="img"
+              mode="aspectFill"
+              @click="previewPostImages(idx)"
+            />
+          </view>
         </view>
 
-        <view v-if="post.videoUrl" class="post-video-box">
-          <video class="post-video" :src="post.videoUrl" controls />
+        <!-- 按照微信朋友圈规则展示视频 (未点开时呈现封面与 ▶ 播放大图标) -->
+        <view v-if="post.videoUrl" class="moment-video-box">
+          <view v-if="!isPlayingVideo" class="video-cover-card" @click="isPlayingVideo = true">
+            <image class="video-cover-img" :src="post.videoPoster || post.images[0] || defaultVideoPoster" mode="aspectFill" />
+            <view class="play-btn-overlay">
+              <view class="play-icon-circle">
+                <text class="play-arrow">▶</text>
+              </view>
+            </view>
+            <text class="video-duration-tag">00:15</text>
+          </view>
+          <!-- 点击后播放全屏/原生视频 -->
+          <video v-else class="active-video-player" :src="post.videoUrl" autoplay controls />
         </view>
 
         <!-- 底部 Tag 标签 -->
@@ -87,10 +123,11 @@
               <text class="comment-text">{{ comment.content }}</text>
             </view>
 
-            <!-- 评论附带图片/视频 -->
+            <!-- 评论附带图片朋友圈卡片样式 -->
             <view v-if="comment.image" class="comment-media-box">
-              <image class="comment-img" :src="comment.image" mode="aspectFill" @click="previewSingleImg(comment.image)" />
+              <image class="comment-moment-img" :src="comment.image" mode="aspectFill" @click="previewSingleImg(comment.image)" />
             </view>
+            <!-- 评论附带视频朋友圈卡片样式 -->
             <view v-if="comment.video" class="comment-media-box">
               <video class="comment-video" :src="comment.video" controls />
             </view>
@@ -124,7 +161,7 @@
 
     <!-- 4. 底部固定贴吧回复输入栏 -->
     <view class="reply-input-bar">
-      <!-- 动态回复目标提示小标签 (若选中了具体回复对象) -->
+      <!-- 动态回复目标提示小标签 -->
       <view v-if="replyTargetUser" class="reply-target-strip">
         <text class="target-text">正在回复 @{{ replyTargetUser }}</text>
         <text class="cancel-target" @click="clearReplyTarget">✕ 取消回复</text>
@@ -138,13 +175,11 @@
       </view>
 
       <view class="input-row">
-        <!-- 媒体选择图标 (📷 图片 / 🎥 15秒微视频，支持控制流量与画质) -->
         <view class="media-icon-btns">
           <text class="icon-btn" @click="onChooseCommentImage">📷</text>
           <text class="icon-btn" @click="onChooseCommentVideo">🎥</text>
         </view>
 
-        <!-- 输入框 -->
         <input
           v-model="inputContent"
           class="reply-input"
@@ -153,7 +188,6 @@
           @confirm="onSendComment"
         />
 
-        <!-- 发送按钮 -->
         <button
           class="send-btn"
           :disabled="!canSend"
@@ -169,15 +203,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
 
 const inputContent = ref('')
-const replyTargetComment = ref(null) // 选中的目标主评论
-const replyTargetUser = ref('')      // 选中的目标用户名
-const commentMedia = ref({ type: null, path: '' }) // 评论附带图片/视频
+const replyTargetComment = ref(null)
+const replyTargetUser = ref('')
+const commentMedia = ref({ type: null, path: '' })
+const isPlayingVideo = ref(false) // 视频播放状态
 
-// 预设高保真帖子详情
+const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600'
+
+// 预设帖子详情数据
 const post = ref({
   id: 'p1',
   authorName: '王阿姨',
@@ -191,11 +228,11 @@ const post = ref({
     'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600'
   ],
   videoUrl: '',
+  videoPoster: '',
   tagName: '邻里求助',
   tagType: 'NORMAL'
 })
 
-// 盖楼评论列表数据
 const commentList = ref([
   {
     id: 'c1',
@@ -236,11 +273,6 @@ const canSend = computed(() => {
   return inputContent.value.trim().length > 0 || commentMedia.value.path !== ''
 })
 
-onMounted(() => {
-  // 页面加载逻辑
-})
-
-// 返回
 const onBack = () => {
   const pages = getCurrentPages()
   if (pages && pages.length > 1) {
@@ -252,7 +284,6 @@ const onBack = () => {
   }
 }
 
-// 预览帖子多图
 const previewPostImages = (index) => {
   uni.previewImage({
     urls: post.value.images,
@@ -260,26 +291,22 @@ const previewPostImages = (index) => {
   })
 }
 
-// 预览单图
 const previewSingleImg = (url) => {
   uni.previewImage({
     urls: [url]
   })
 }
 
-// 设置回复目标
 const setReplyTarget = (mainComment, targetUserName = '') => {
   replyTargetComment.value = mainComment
   replyTargetUser.value = targetUserName || mainComment.authorName
 }
 
-// 清除回复目标
 const clearReplyTarget = () => {
   replyTargetComment.value = null
   replyTargetUser.value = ''
 }
 
-// 评论附带上传图片 (自动压缩与限重)
 const onChooseCommentImage = async () => {
   try {
     const paths = await chooseAndCompressImages({ count: 1, maxMB: 2 })
@@ -294,7 +321,6 @@ const onChooseCommentImage = async () => {
   }
 }
 
-// 评论附带上传微视频 (15秒流量控制与自动压缩)
 const onChooseCommentVideo = async () => {
   try {
     const path = await chooseAndCompressVideo({ isReply: true, maxMB: 15 })
@@ -313,14 +339,12 @@ const clearCommentMedia = () => {
   commentMedia.value = { type: null, path: '' }
 }
 
-// 发送评论 / 盖楼子回复
 const onSendComment = () => {
   if (!canSend.value) return
 
   const text = inputContent.value.trim()
   
   if (replyTargetComment.value) {
-    // 盖楼：追加到目标主评论的 subReplies 中
     if (!replyTargetComment.value.subReplies) {
       replyTargetComment.value.subReplies = []
     }
@@ -331,7 +355,6 @@ const onSendComment = () => {
       content: text
     })
   } else {
-    // 新的主楼层评论
     commentList.value.unshift({
       id: 'c_' + Date.now(),
       authorName: '我 (李先生)',
@@ -344,7 +367,6 @@ const onSendComment = () => {
     })
   }
 
-  // 重置输入状态
   inputContent.value = ''
   clearReplyTarget()
   clearCommentMedia()
@@ -362,7 +384,6 @@ const onSendComment = () => {
   position: relative;
 }
 
-/* 1. 顶部导航 */
 .nav-bar {
   padding: 44px 16px 12px 16px;
   background-color: #FFFFFF;
@@ -397,14 +418,12 @@ const onSendComment = () => {
   width: 36px;
 }
 
-/* 2. 滚动区 */
 .detail-body {
   flex: 1;
   padding: 16px;
   box-sizing: border-box;
 }
 
-/* 楼主主发帖卡片 */
 .main-post-card {
   background: #FFFFFF;
   border-radius: 20px;
@@ -476,25 +495,105 @@ const onSendComment = () => {
   line-height: 1.7;
 }
 
-/* 多图九宫格 */
-.post-media-grid {
+/* 微信朋友圈媒体展示规则 (未点开时) */
+.moment-media-box {
+  margin-bottom: 14px;
+}
+
+/* 规则 A: 朋友圈单张图片 (自适应宽高最大限制) */
+.single-image-wrapper {
+  max-width: 72%;
+}
+
+.moment-single-img {
+  width: 100%;
+  max-height: 240px;
+  border-radius: 12px;
+  display: block;
+}
+
+/* 规则 B: 朋友圈 4 张图片 (2×2 正方形网格) */
+.moment-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 110px);
+  gap: 6px;
+}
+
+/* 规则 C: 朋友圈 2/3/5~9 张图片 (3列九宫格网格) */
+.moment-grid-3col {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
 }
 
-.media-img {
+.moment-grid-img {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
-.post-video-box {
+/* 规则 D: 朋友圈未点开时的视频封面与播放按钮 */
+.moment-video-box {
   margin-bottom: 14px;
+  width: 72%;
 }
 
-.post-video {
+.video-cover-card {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000000;
+}
+
+.video-cover-img {
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+
+.play-btn-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-arrow {
+  color: #FFFFFF;
+  font-size: 18px;
+  margin-left: 2px;
+}
+
+.video-duration-tag {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #FFFFFF;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.active-video-player {
   width: 100%;
   height: 200px;
   border-radius: 12px;
@@ -515,7 +614,7 @@ const onSendComment = () => {
   color: #DC2626;
 }
 
-/* 3. 贴吧风盖楼评论区 */
+/* 评论区 */
 .comments-section {
   background: #FFFFFF;
   border-radius: 20px;
@@ -621,9 +720,9 @@ const onSendComment = () => {
   margin-bottom: 8px;
 }
 
-.comment-img {
+.comment-moment-img {
   width: 120px;
-  height: 120px;
+  max-height: 160px;
   border-radius: 10px;
 }
 
@@ -633,7 +732,6 @@ const onSendComment = () => {
   border-radius: 10px;
 }
 
-/* 盖楼二层子回复 (Nested Reply Thread) */
 .sub-reply-container {
   margin-left: 46px;
   background: #F9FAFB;
@@ -693,7 +791,6 @@ const onSendComment = () => {
   height: 100px;
 }
 
-/* 4. 固定回复输入栏 */
 .reply-input-bar {
   position: fixed;
   bottom: 0;
