@@ -228,6 +228,18 @@ const removeVideo = () => {
   mediaType.value = 'NONE'
 }
 
+// 🛡️ 安全返回处理 (自动防御 navigateBack:fail cannot navigate back at first page 报错)
+const safeNavigateBack = () => {
+  const pages = getCurrentPages()
+  if (pages && pages.length > 1) {
+    uni.navigateBack()
+  } else {
+    uni.switchTab({
+      url: '/pages/index/index'
+    })
+  }
+}
+
 const onBack = () => {
   if (content.value.length > 0 || images.value.length > 0 || videoUrl.value !== '') {
     uni.showModal({
@@ -235,12 +247,12 @@ const onBack = () => {
       content: '退出后编辑的内容将不保留，是否确认离开？',
       success: (res) => {
         if (res.confirm) {
-          uni.navigateBack()
+          safeNavigateBack()
         }
       }
     })
   } else {
-    uni.navigateBack()
+    safeNavigateBack()
   }
 }
 
@@ -252,7 +264,7 @@ const onSubmit = () => {
     uni.hideLoading()
     uni.showToast({ title: '发布成功！', icon: 'success' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack()
     }, 1200)
   }, 800)
 }
@@ -310,7 +322,6 @@ const onSubmit = () => {
   box-sizing: border-box;
 }
 
-/* 统一卡片 */
 .section-box {
   background: #FFFFFF;
   border-radius: 16px;
@@ -320,7 +331,6 @@ const onSubmit = () => {
   box-sizing: border-box;
 }
 
-/* 板块选择与回显栏 */
 .category-select-bar {
   display: flex;
   justify-content: space-between;
@@ -376,7 +386,6 @@ const onSubmit = () => {
   color: #9CA3AF;
 }
 
-/* 输入框 */
 .content-input {
   width: 100%;
   height: 120px;
@@ -394,7 +403,6 @@ const onSubmit = () => {
   margin-top: 4px;
 }
 
-/* 媒体选择：修复九宫格与上传按钮样式 */
 .section-title {
   font-size: 14px;
   font-weight: 700;
@@ -503,7 +511,6 @@ const onSubmit = () => {
   padding: 6px;
 }
 
-/* 友好公约 */
 .convention-card {
   background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%);
   border-radius: 16px;
@@ -540,7 +547,6 @@ const onSubmit = () => {
   height: 90px;
 }
 
-/* 固定底栏 */
 .fixed-footer {
   position: fixed;
   bottom: 0;
@@ -571,7 +577,6 @@ const onSubmit = () => {
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
 }
 
-/* 精致半屏板块选择弹窗 */
 .popup-mask {
   position: fixed;
   top: 0;
