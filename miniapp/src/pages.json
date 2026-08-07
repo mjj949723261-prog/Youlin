@@ -1,0 +1,58 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "悦邻里 - 首页",
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#F0F7F4"
+      }
+    },
+    {
+      "path": "pages/publish/publish",
+      "style": {
+        "navigationBarTitleText": "发布动态",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/service/service",
+      "style": {
+        "navigationBarTitleText": "社区服务"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "悦邻里",
+    "navigationBarBackgroundColor": "#F0F7F4",
+    "backgroundColor": "#F0F7F4"
+  },
+  "tabBar": {
+    "color": "#6B7280",
+    "selectedColor": "#10B981",
+    "borderStyle": "white",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/service/service",
+        "text": "服务"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的"
+      }
+    ]
+  }
+}

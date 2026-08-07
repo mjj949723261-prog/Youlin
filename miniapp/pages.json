@@ -1,0 +1,70 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "悦邻里 - 首页",
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#F0F7F4"
+      }
+    },
+    {
+      "path": "pages/neighbor/neighbor",
+      "style": {
+        "navigationBarTitleText": "邻里圈",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/service/service",
+      "style": {
+        "navigationBarTitleText": "社区服务"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "悦邻里",
+    "navigationBarBackgroundColor": "#F0F7F4",
+    "backgroundColor": "#F0F7F4"
+  },
+  "tabBar": {
+    "color": "#6B7280",
+    "selectedColor": "#10B981",
+    "borderStyle": "white",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/neighbor/neighbor",
+        "text": "邻里圈",
+        "iconPath": "static/tabbar/neighbor.png",
+        "selectedIconPath": "static/tabbar/neighbor-active.png"
+      },
+      {
+        "pagePath": "pages/service/service",
+        "text": "服务",
+        "iconPath": "static/tabbar/service.png",
+        "selectedIconPath": "static/tabbar/service-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
+      }
+    ]
+  }
+}

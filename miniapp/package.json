@@ -1,0 +1,29 @@
+{
+  "name": "yuelinli-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:h5": "uni",
+    "build:mp-weixin": "uni -p mp-weixin",
+    "build:h5": "uni build"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-3090820231124001",
+    "@dcloudio/uni-app-plus": "3.0.0-3090820231124001",
+    "@dcloudio/uni-components": "3.0.0-3090820231124001",
+    "@dcloudio/uni-h5": "3.0.0-3090820231124001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-3090820231124001",
+    "@dcloudio/uni-ui": "^1.4.28",
+    "pinia": "^2.1.7",
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.3.2",
+    "@dcloudio/uni-cli-shared": "3.0.0-3090820231124001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-3090820231124001",
+    "@vitejs/plugin-vue": "4.2.3",
+    "vite": "4.3.9"
+  }
+}
