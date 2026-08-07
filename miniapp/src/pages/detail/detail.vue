@@ -31,9 +31,9 @@
           <text class="content-text">{{ post.content }}</text>
         </view>
 
-        <!-- 按照微信朋友圈规则展示图片 (未点开时) -->
+        <!-- 按照微信朋友圈标准规则展示图片 (未点开时) -->
         <view v-if="post.images && post.images.length > 0" class="moment-media-box">
-          <!-- 规则 A：单张图片 (自适应显示，限制最大宽高，不强制正方形) -->
+          <!-- 朋友圈规则 1：单张图片 (自适应宽高限制) -->
           <view v-if="post.images.length === 1" class="single-image-wrapper">
             <image
               class="moment-single-img"
@@ -43,24 +43,24 @@
             />
           </view>
 
-          <!-- 规则 B：4 张图片 (2×2 朋友圈网格) -->
-          <view v-else-if="post.images.length === 4" class="moment-grid-2x2">
+          <!-- 朋友圈规则 2：2张 或 4张图片 (双列并排正方形网格 110px * 110px) -->
+          <view v-else-if="post.images.length === 2 || post.images.length === 4" class="moment-grid-2col">
             <image
               v-for="(img, idx) in post.images"
               :key="idx"
-              class="moment-grid-img"
+              class="moment-square-img-2col"
               :src="img"
               mode="aspectFill"
               @click="previewPostImages(idx)"
             />
           </view>
 
-          <!-- 规则 C：2/3/5~9 张图片 (标准 3 列朋友圈九宫格) -->
+          <!-- 朋友圈规则 3：3张 / 5~9张图片 (三列标准九宫格正方形 84px * 84px) -->
           <view v-else class="moment-grid-3col">
             <image
               v-for="(img, idx) in post.images"
               :key="idx"
-              class="moment-grid-img"
+              class="moment-square-img-3col"
               :src="img"
               mode="aspectFill"
               @click="previewPostImages(idx)"
@@ -68,7 +68,7 @@
           </view>
         </view>
 
-        <!-- 按照微信朋友圈规则展示视频 (未点开时呈现封面与 ▶ 播放大图标) -->
+        <!-- 朋友圈规则 4：未点开时的视频封面与 ▶ 播放大图标 -->
         <view v-if="post.videoUrl" class="moment-video-box">
           <view v-if="!isPlayingVideo" class="video-cover-card" @click="isPlayingVideo = true">
             <image class="video-cover-img" :src="post.videoPoster || post.images[0] || defaultVideoPoster" mode="aspectFill" />
@@ -79,7 +79,6 @@
             </view>
             <text class="video-duration-tag">00:15</text>
           </view>
-          <!-- 点击后播放全屏/原生视频 -->
           <video v-else class="active-video-player" :src="post.videoUrl" autoplay controls />
         </view>
 
@@ -98,14 +97,12 @@
           <text class="sort-tip">按时间倒序</text>
         </view>
 
-        <!-- 评论楼层列表 -->
         <view v-if="commentList.length > 0" class="comment-list">
           <view
             v-for="(comment, index) in commentList"
             :key="comment.id"
             class="comment-card"
           >
-            <!-- 楼层主回复 -->
             <view class="comment-user-row">
               <image class="comment-avatar" :src="comment.avatar" mode="aspectFill" />
               <view class="comment-user-meta">
@@ -118,21 +115,17 @@
               <text class="reply-action-btn" @click="setReplyTarget(comment)">回复</text>
             </view>
 
-            <!-- 评论文字 -->
             <view class="comment-text-box">
               <text class="comment-text">{{ comment.content }}</text>
             </view>
 
-            <!-- 评论附带图片朋友圈卡片样式 -->
             <view v-if="comment.image" class="comment-media-box">
               <image class="comment-moment-img" :src="comment.image" mode="aspectFill" @click="previewSingleImg(comment.image)" />
             </view>
-            <!-- 评论附带视频朋友圈卡片样式 -->
             <view v-if="comment.video" class="comment-media-box">
               <video class="comment-video" :src="comment.video" controls />
             </view>
 
-            <!-- 盖楼楼中楼 (Nested Reply Sub-List) -->
             <view v-if="comment.subReplies && comment.subReplies.length > 0" class="sub-reply-container">
               <view
                 v-for="sub in comment.subReplies"
@@ -149,7 +142,6 @@
           </view>
         </view>
 
-        <!-- 空评论提示 -->
         <view v-else class="empty-comments">
           <text class="empty-icon">💬</text>
           <text class="empty-text">暂无邻里回复，快来抢沙发吧~</text>
@@ -161,13 +153,11 @@
 
     <!-- 4. 底部固定贴吧回复输入栏 -->
     <view class="reply-input-bar">
-      <!-- 动态回复目标提示小标签 -->
       <view v-if="replyTargetUser" class="reply-target-strip">
         <text class="target-text">正在回复 @{{ replyTargetUser }}</text>
         <text class="cancel-target" @click="clearReplyTarget">✕ 取消回复</text>
       </view>
 
-      <!-- 评论附带媒体预览缩略图 -->
       <view v-if="commentMedia.path" class="attach-media-preview">
         <image v-if="commentMedia.type === 'IMAGE'" class="attach-img" :src="commentMedia.path" mode="aspectFill" />
         <video v-else-if="commentMedia.type === 'VIDEO'" class="attach-video" :src="commentMedia.path" />
@@ -210,11 +200,10 @@ const inputContent = ref('')
 const replyTargetComment = ref(null)
 const replyTargetUser = ref('')
 const commentMedia = ref({ type: null, path: '' })
-const isPlayingVideo = ref(false) // 视频播放状态
+const isPlayingVideo = ref(false)
 
 const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600'
 
-// 预设帖子详情数据
 const post = ref({
   id: 'p1',
   authorName: '王阿姨',
@@ -495,47 +484,58 @@ const onSendComment = () => {
   line-height: 1.7;
 }
 
-/* 微信朋友圈媒体展示规则 (未点开时) */
+/* 微信朋友圈媒体显示规范 (未点开时) */
 .moment-media-box {
   margin-bottom: 14px;
 }
 
-/* 规则 A: 朋友圈单张图片 (自适应宽高最大限制) */
+/* 规则 1: 朋友圈单张图片 (自适应宽度，高度上限220px，不强制正方形) */
 .single-image-wrapper {
-  max-width: 72%;
+  max-width: 70%;
 }
 
 .moment-single-img {
   width: 100%;
-  max-height: 240px;
+  height: auto;
+  max-height: 220px;
   border-radius: 12px;
   display: block;
 }
 
-/* 规则 B: 朋友圈 4 张图片 (2×2 正方形网格) */
-.moment-grid-2x2 {
-  display: grid;
-  grid-template-columns: repeat(2, 110px);
+/* 规则 2: 朋友圈 2 张或 4 张图片 (并排双列正方形卡片 110px × 110px，绝不拉爆上下) */
+.moment-grid-2col {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  max-width: 230px;
 }
 
-/* 规则 C: 朋友圈 2/3/5~9 张图片 (3列九宫格网格) */
-.moment-grid-3col {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.moment-grid-img {
-  width: 100%;
-  aspect-ratio: 1;
+.moment-square-img-2col {
+  width: 110px;
+  height: 110px;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
-/* 规则 D: 朋友圈未点开时的视频封面与播放按钮 */
+/* 规则 3: 朋友圈 3张 / 5~9张图片 (三列标准九宫格正方形 84px × 84px) */
+.moment-grid-3col {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 270px;
+}
+
+.moment-square-img-3col {
+  width: 84px;
+  height: 84px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* 规则 4: 朋友圈未点开时的视频卡片 */
 .moment-video-box {
   margin-bottom: 14px;
-  width: 72%;
+  width: 70%;
 }
 
 .video-cover-card {
