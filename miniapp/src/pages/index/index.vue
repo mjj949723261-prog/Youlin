@@ -47,7 +47,7 @@
       </view>
     </view>
 
-    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 -->
+    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 (点击直接进入帖子详情页) -->
     <view class="feed-list">
       <block v-if="filteredPosts.length > 0">
         <PostCard
@@ -68,7 +68,7 @@
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 6. 右侧平滑动画抽屉筛选弹窗 (纯粹纯文字板块筛选) -->
+    <!-- 6. 右侧平滑动画抽屉筛选弹窗 -->
     <view class="drawer-mask" :class="{ show: showDrawer }" @click="closeFilterDrawer"></view>
     <view class="drawer-panel" :class="{ show: showDrawer }">
       <view class="drawer-header">
@@ -110,15 +110,12 @@ import PostCard from '@/components/PostCard.vue'
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
 
-// 顶部 Tab
 const tabs = ref(['推荐', '邻里圈', '同城'])
 const currentTab = ref(0)
 
-// 抽屉与板块筛选状态
 const showDrawer = ref(false)
 const selectedCategory = ref('ALL')
 
-// 纯粹纯文字板块选项
 const categoryOptions = ref([
   { label: '全部板块', value: 'ALL' },
   { label: '邻里求助', value: 'HELP' },
@@ -129,7 +126,6 @@ const categoryOptions = ref([
   { label: '业委会公示', value: 'COMMITTEE' }
 ])
 
-// 预设帖子数据集
 const allPosts = ref([
   {
     id: 'p1',
@@ -202,7 +198,6 @@ onMounted(() => {
   }
 })
 
-// 抽屉控制
 const openFilterDrawer = () => {
   showDrawer.value = true
 }
@@ -241,15 +236,17 @@ const onViewNotice = () => {
   })
 }
 
-// 直接跳转到专属发布页面
 const onPublishClick = () => {
   uni.navigateTo({
     url: '/pages/publish/publish'
   })
 }
 
+// 点击帖子直接进入详情页
 const onPostDetail = (id) => {
-  console.log('查看帖子详情', id)
+  uni.navigateTo({
+    url: '/pages/detail/detail?id=' + id
+  })
 }
 </script>
 
@@ -432,7 +429,6 @@ const onPostDetail = (id) => {
   color: #9CA3AF;
 }
 
-/* 5. 高颜值悬浮加号发帖大按钮 (FAB) */
 .fab-post-btn {
   position: fixed;
   right: 20px;
@@ -456,7 +452,6 @@ const onPostDetail = (id) => {
   margin-top: -2px;
 }
 
-/* 6. 右侧滑出抽屉平滑动画 */
 .drawer-mask {
   position: fixed;
   top: 0;

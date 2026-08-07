@@ -10,6 +10,13 @@
       }
     },
     {
+      "path": "pages/detail/detail",
+      "style": {
+        "navigationBarTitleText": "帖子详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/publish/publish",
       "style": {
         "navigationBarTitleText": "发布动态",
