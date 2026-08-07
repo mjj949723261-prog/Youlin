@@ -26,7 +26,8 @@
     {
       "path": "pages/service/service",
       "style": {
-        "navigationBarTitleText": "社区服务"
+        "navigationBarTitleText": "社区服务",
+        "navigationStyle": "custom"
       }
     },
     {
