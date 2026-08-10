@@ -50,7 +50,7 @@ public class UserController {
                     openId = jsonNode.get("openid").asText();
                     System.out.println("成功换取微信 OpenID: " + openId);
                 } else {
-                    System.err.println("换取 OpenID 失败: " + responseStr);
+                    System.err.println("换取 OpenID 返回: " + responseStr);
                 }
             } catch (Exception e) {
                 System.err.println("调用微信 jscode2session 异常: " + e.getMessage());
@@ -68,6 +68,7 @@ public class UserController {
             user.setIsOwner(true);
             user.setRoleTag("本小区住户");
             user.setCommunityId("comm_001");
+            user.setPhone(null); // 未绑定时初始化为 null
             userMapper.insert(user);
         }
 
@@ -135,16 +136,17 @@ public class UserController {
                     reqBody.put("code", phoneCode);
 
                     String phoneRes = restTemplate.postForObject(phoneUrl, reqBody, String.class);
-                    System.out.println("微信手机号 API 返回: " + phoneRes);
+                    System.out.println("微信手机号 API 解密返回结果: " + phoneRes);
 
                     JsonNode phoneJson = objectMapper.readTree(phoneRes);
                     if (phoneJson.has("errcode") && phoneJson.get("errcode").asInt() == 0) {
                         JsonNode phoneInfo = phoneJson.get("phone_info");
                         if (phoneInfo != null && phoneInfo.has("phoneNumber")) {
                             realPhone = phoneInfo.get("phoneNumber").asText();
+                            System.out.println("成功解密到用户微信真实绑定手机号: " + realPhone);
                         }
                     } else {
-                        System.err.println("微信获取手机号接口报错: " + phoneRes);
+                        System.err.println("微信获取手机号接口返回错误: " + phoneRes);
                     }
                 } else {
                     System.err.println("获取 access_token 失败: " + tokenRes);
@@ -154,12 +156,11 @@ public class UserController {
             }
         }
 
-        // 如果未成功解密到真实手机号，兜底防御
         if (realPhone == null || realPhone.isEmpty()) {
-            realPhone = "13888886666";
+            return Result.error(500, "未能获取到真实的微信绑定手机号，请在手机微信真机中体验");
         }
 
-        // 格式化生成脱敏掩码手机号 (如 138****6666)
+        // 格式化生成脱敏掩码手机号 (如 159****8888)
         String maskedPhone = realPhone.length() == 11
             ? realPhone.substring(0, 3) + "****" + realPhone.substring(7)
             : realPhone;
