@@ -87,7 +87,7 @@
         </view>
       </view>
 
-      <!-- 4. 商业化增值/高级功能入口 (商业拓展预留) -->
+      <!-- 4. 商业化增值/高级功能入口 -->
       <view class="menu-group">
         <view class="group-header-row">
           <text class="group-title">社区增值服务 (增值拓展预留)</text>
@@ -115,50 +115,19 @@
             <text class="arrow">›</text>
           </view>
         </view>
-
-        <view class="menu-item" @click="onFeatureReserved('公区报修与工单跟踪')">
-          <view class="menu-left">
-            <text class="menu-icon">🛠️</text>
-            <text class="menu-label">公区工单与报修记录</text>
-          </view>
-          <view class="menu-right">
-            <text class="arrow">›</text>
-          </view>
-        </view>
       </view>
 
-      <!-- 5. 邻里工具与系统设置 -->
+      <!-- 5. 邻里工具与退出登录调试 -->
       <view class="menu-group">
-        <text class="group-title">工具与支持</text>
+        <text class="group-title">账号与安全</text>
 
-        <view class="menu-item" @click="onInviteNeighbor">
+        <view class="menu-item" @click="onResetLogin">
           <view class="menu-left">
-            <text class="menu-icon">💌</text>
-            <text class="menu-label">邀请邻居入驻云彩之城</text>
+            <text class="menu-icon">🚪</text>
+            <text class="menu-label" style="color: #DC2626;">退出并重新进行微信授权登录</text>
           </view>
           <view class="menu-right">
-            <text class="menu-sub-tip">共享生成邀请码</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onCallProperty">
-          <view class="menu-left">
-            <text class="menu-icon">📞</text>
-            <text class="menu-label">新塘街道彩虹社区 / 物业电话</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">一键拨打</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onFeedback">
-          <view class="menu-left">
-            <text class="menu-icon">💬</text>
-            <text class="menu-label">意见反馈与建议</text>
-          </view>
-          <view class="menu-right">
+            <text class="menu-sub-tip">重置调试</text>
             <text class="arrow">›</text>
           </view>
         </view>
@@ -185,7 +154,6 @@ onMounted(() => {
   inputNickname.value = communityStore.currentUser.nickname || '张先生'
 })
 
-// 微信快捷选头像
 const onChooseWxAvatar = (e) => {
   if (e.detail && e.detail.avatarUrl) {
     communityStore.syncWxProfile(null, e.detail.avatarUrl)
@@ -193,7 +161,6 @@ const onChooseWxAvatar = (e) => {
   }
 }
 
-// 微信快捷填昵称
 const onNicknameBlur = (e) => {
   const val = e.detail.value || inputNickname.value
   if (val) {
@@ -202,7 +169,13 @@ const onNicknameBlur = (e) => {
   }
 }
 
-// 切换房产/小区
+const onResetLogin = () => {
+  communityStore.clearLoginState()
+  uni.switchTab({
+    url: '/pages/index/index'
+  })
+}
+
 const onSwitchProperty = () => {
   uni.showActionSheet({
     itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.building + ')'),
@@ -212,21 +185,18 @@ const onSwitchProperty = () => {
   })
 }
 
-// 查看我的发帖
 const onNavToMyPosts = () => {
   uni.showModal({
     title: '📝 我的发帖与回复记录',
-    content: '您在【云彩之城】共发布了 12 条动态，包括 3 条邻里求助与 5 条闲置面交。',
+    content: '您在【这儿有邻】共发布了 12 条动态。',
     showCancel: false
   })
 }
 
-// 查看我的收藏
 const onNavToMyFav = () => {
   uni.showToast({ title: '查看获得的点赞...', icon: 'none' })
 }
 
-// 房产管理
 const onNavToProperty = () => {
   uni.showModal({
     title: '🏢 我的房产认证',
@@ -235,47 +205,20 @@ const onNavToProperty = () => {
   })
 }
 
-// 消息中心
 const onNavToNotice = () => {
   uni.showModal({
     title: '🔔 消息通知中心',
-    content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区公告：新塘街道彩虹社区正式成立通知',
+    content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区服务中心成立通知',
     showCancel: false
   })
 }
 
-// 预留辅助收费功能接口点击提示
 const onFeatureReserved = (featureName) => {
   uni.showModal({
     title: `⚙️ ${featureName}`,
-    content: `【${featureName}】为辅助定制功能（后期增值收费项目），目前接口已全量预留，可随时对接小区物业门禁与缴费系统！`,
+    content: `【${featureName}】为辅助功能，可随时对接物业门禁与缴费系统！`,
     showCancel: false
   })
-}
-
-// 邀请邻居
-const onInviteNeighbor = () => {
-  uni.showModal({
-    title: '💌 邀请邻居入驻',
-    content: '感谢您邀请邻居加入【云彩之城】社区交流圈！转发分享小程序即可邀请邻居完成房产认证。',
-    showCancel: false
-  })
-}
-
-// 拨打物业/社区电话
-const onCallProperty = () => {
-  uni.showActionSheet({
-    itemList: ['拨打 彩虹社区服务中心: 0571-88889999', '拨打 云彩之城物业处: 0571-66668888'],
-    success: (res) => {
-      const num = res.tapIndex === 0 ? '057188889999' : '057166668888'
-      uni.makePhoneCall({ phoneNumber: num })
-    }
-  })
-}
-
-// 反馈
-const onFeedback = () => {
-  uni.showToast({ title: '感谢您的意见反馈！', icon: 'none' })
 }
 </script>
 
@@ -289,7 +232,6 @@ const onFeedback = () => {
   overflow: hidden;
 }
 
-/* 1. 顶部用户 Profile 卡片 Header (高颜值绿色渐变) */
 .user-profile-card {
   background: linear-gradient(180deg, #10B981 0%, #059669 100%);
   padding-left: 20px;
@@ -413,7 +355,6 @@ const onFeedback = () => {
   margin-left: 2px;
 }
 
-/* 2. 交互数据快捷栏 */
 .stats-row {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
@@ -449,7 +390,6 @@ const onFeedback = () => {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* 主体功能分组区 */
 .mine-scroll-body {
   flex: 1;
   height: 0;

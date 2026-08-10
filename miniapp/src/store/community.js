@@ -1,7 +1,9 @@
 import { reactive } from 'vue'
 import { apiWxLogin, apiUpdateProfile } from '@/utils/api'
 
-const hasLoggedInStorage = uni.getStorageSync('hasLoggedIn') === true
+// 强制清空本地登录缓存，满足调试重新登录测试需求
+uni.removeStorageSync('hasLoggedIn')
+uni.removeStorageSync('userToken')
 
 export const state = reactive({
   currentCommunity: {
@@ -20,9 +22,9 @@ export const state = reactive({
     isOwner: true,
     roleTag: '本小区住户'
   },
-  isLoggedIn: hasLoggedInStorage,
-  showLoginModal: !hasLoggedInStorage,
-  userToken: uni.getStorageSync('userToken') || '',
+  isLoggedIn: false, // 强制初始化为未登录
+  showLoginModal: true, // 强制显示全屏登录弹窗
+  userToken: '',
   myCommunities: [
     {
       id: 'comm_001',
@@ -50,46 +52,42 @@ export const useCommunityStore = () => {
 
   const performWxLogin = async () => {
     return new Promise((resolve) => {
-      // 容错安全包装，全面防御 tourist appid 游客模式
-      try {
-        // #ifdef MP-WEIXIN
-        uni.login({
-          provider: 'weixin',
-          success: async (res) => {
-            if (res.code) {
-              try {
-                const loginRes = await apiWxLogin(res.code)
-                if (loginRes) {
-                  setSuccessState(loginRes.token, loginRes.userInfo)
-                } else {
-                  setSuccessState()
-                }
-              } catch (e) {
-                setSuccessState()
-              }
+      // #ifdef MP-WEIXIN
+      uni.login({
+        provider: 'weixin',
+        success: async (res) => {
+          if (res.code) {
+            console.log('微信登录 code:', res.code)
+            const loginRes = await apiWxLogin(res.code)
+            if (loginRes) {
+              setSuccessState(loginRes.token, loginRes.userInfo)
             } else {
               setSuccessState()
             }
-            resolve(true)
-          },
-          fail: (err) => {
-            // 防御微信游客模式 (tourist appid) 不支持 wx.login 限制
-            console.warn('游客模式或未配置AppID，已降级为演示登录:', err)
+          } else {
             setSuccessState()
-            resolve(true)
           }
-        })
-        // #endif
-        // #ifndef MP-WEIXIN
-        setSuccessState()
-        resolve(true)
-        // #endif
-      } catch (e) {
-        console.warn('登录异常捕获:', e)
-        setSuccessState()
-        resolve(true)
-      }
+          resolve(true)
+        },
+        fail: () => {
+          setSuccessState()
+          resolve(false)
+        }
+      })
+      // #endif
+      // #ifndef MP-WEIXIN
+      setSuccessState()
+      resolve(true)
+      // #endif
     })
+  }
+
+  const clearLoginState = () => {
+    uni.removeStorageSync('hasLoggedIn')
+    uni.removeStorageSync('userToken')
+    state.isLoggedIn = false
+    state.showLoginModal = true
+    uni.showToast({ title: '已清空登录信息，请重新登录', icon: 'none' })
   }
 
   const syncWxProfile = async (newNickname, newAvatar) => {
@@ -117,6 +115,7 @@ export const useCommunityStore = () => {
     myCommunities: state.myCommunities,
     performWxLogin,
     initWxAuth: performWxLogin,
+    clearLoginState,
     setSuccessState,
     syncWxProfile,
     switchCommunity
