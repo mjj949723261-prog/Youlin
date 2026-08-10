@@ -47,7 +47,7 @@
       </view>
     </view>
 
-    <!-- 4. 放置在“推荐 邻里圈”Tab 栏正下方的专属列表刷新指示与点击刷新条 -->
+    <!-- 4. 放置在“推荐 邻里圈”Tab 栏正下方的专属列表刷新指示条 (动态显示最新刷新时间) -->
     <view class="tab-bottom-refresh-bar" @click="manualRefresh">
       <view class="refresh-left">
         <text class="refresh-dot"></text>
@@ -55,7 +55,7 @@
       </view>
 
       <view class="refresh-right">
-        <text class="refresh-time-text">{{ isRefreshing ? '正在拉取最新数据...' : '刚才更新' }}</text>
+        <text class="refresh-time-text">{{ isRefreshing ? '正在拉取最新数据...' : (lastRefreshTimeText + ' 刷新') }}</text>
         <text class="refresh-spin-icon" :class="{ spinning: isRefreshing }">↺</text>
       </view>
     </view>
@@ -131,6 +131,16 @@ const currentTab = ref(0)
 const showDrawer = ref(false)
 const selectedCategory = ref('ALL')
 const isRefreshing = ref(false)
+const lastRefreshTimeText = ref('')
+
+// 获取当前的 HH:mm:ss 格式精细时间文本
+const getNowTimeStr = () => {
+  const now = new Date()
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const ss = String(now.getSeconds()).padStart(2, '0')
+  return `${hh}:${mm}:${ss}`
+}
 
 const categoryOptions = ref([
   { label: '全部板块', value: 'ALL' },
@@ -152,6 +162,7 @@ const fetchPostList = async (showToast = false) => {
     if (data) {
       posts.value = data
     }
+    lastRefreshTimeText.value = getNowTimeStr()
     if (showToast) {
       uni.showToast({ title: '列表数据已刷新', icon: 'success' })
     }
@@ -168,6 +179,7 @@ onMounted(() => {
   if (sysInfo.statusBarHeight) {
     statusBarHeight.value = sysInfo.statusBarHeight
   }
+  lastRefreshTimeText.value = getNowTimeStr()
   fetchPostList()
 })
 
@@ -179,7 +191,6 @@ onPullDownRefresh(() => {
   fetchPostList(true)
 })
 
-// 点击“推荐 邻里圈”下方的刷新条刷新列表数据
 const manualRefresh = () => {
   fetchPostList(true)
 }
@@ -396,7 +407,6 @@ const onPostDetail = (id) => {
   font-weight: 700;
 }
 
-/* 正好放在“推荐 邻里圈 同城”Tab 下方的刷新指示与控制条 */
 .tab-bottom-refresh-bar {
   display: flex;
   justify-content: space-between;
@@ -436,6 +446,7 @@ const onPostDetail = (id) => {
 .refresh-time-text {
   font-size: 11px;
   color: #059669;
+  font-weight: 500;
 }
 
 .refresh-spin-icon {
