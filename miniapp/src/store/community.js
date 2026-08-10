@@ -50,33 +50,45 @@ export const useCommunityStore = () => {
 
   const performWxLogin = async () => {
     return new Promise((resolve) => {
-      // #ifdef MP-WEIXIN
-      uni.login({
-        provider: 'weixin',
-        success: async (res) => {
-          if (res.code) {
-            console.log('微信登录 code:', res.code)
-            const loginRes = await apiWxLogin(res.code)
-            if (loginRes) {
-              setSuccessState(loginRes.token, loginRes.userInfo)
+      // 容错安全包装，全面防御 tourist appid 游客模式
+      try {
+        // #ifdef MP-WEIXIN
+        uni.login({
+          provider: 'weixin',
+          success: async (res) => {
+            if (res.code) {
+              try {
+                const loginRes = await apiWxLogin(res.code)
+                if (loginRes) {
+                  setSuccessState(loginRes.token, loginRes.userInfo)
+                } else {
+                  setSuccessState()
+                }
+              } catch (e) {
+                setSuccessState()
+              }
             } else {
               setSuccessState()
             }
-          } else {
+            resolve(true)
+          },
+          fail: (err) => {
+            // 防御微信游客模式 (tourist appid) 不支持 wx.login 限制
+            console.warn('游客模式或未配置AppID，已降级为演示登录:', err)
             setSuccessState()
+            resolve(true)
           }
-          resolve(true)
-        },
-        fail: () => {
-          setSuccessState()
-          resolve(false)
-        }
-      })
-      // #endif
-      // #ifndef MP-WEIXIN
-      setSuccessState()
-      resolve(true)
-      // #endif
+        })
+        // #endif
+        // #ifndef MP-WEIXIN
+        setSuccessState()
+        resolve(true)
+        // #endif
+      } catch (e) {
+        console.warn('登录异常捕获:', e)
+        setSuccessState()
+        resolve(true)
+      }
     })
   }
 
@@ -84,10 +96,14 @@ export const useCommunityStore = () => {
     if (newNickname) state.currentUser.nickname = newNickname
     if (newAvatar) state.currentUser.avatar = newAvatar
 
-    await apiUpdateProfile({
-      nickname: state.currentUser.nickname,
-      avatar: state.currentUser.avatar
-    })
+    try {
+      await apiUpdateProfile({
+        nickname: state.currentUser.nickname,
+        avatar: state.currentUser.avatar
+      })
+    } catch (e) {
+      console.warn('同步头像失败降级', e)
+    }
   }
 
   const switchCommunity = (community) => {
@@ -100,7 +116,7 @@ export const useCommunityStore = () => {
     currentCommunity: state.currentCommunity,
     myCommunities: state.myCommunities,
     performWxLogin,
-    initWxAuth: performWxLogin, // 兼容导出 initWxAuth 函数签名
+    initWxAuth: performWxLogin,
     setSuccessState,
     syncWxProfile,
     switchCommunity
