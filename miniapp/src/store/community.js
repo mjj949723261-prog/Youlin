@@ -1,7 +1,10 @@
 import { reactive } from 'vue'
 import { apiWxLogin, apiUpdateProfile, apiBindPhone } from '@/utils/api'
 
-const hasLoggedInStorage = uni.getStorageSync('hasLoggedIn') === true
+// 强制清空小程序前端本地的所有缓存，让用户亲自体验全新流程
+try {
+  uni.clearStorageSync()
+} catch (e) {}
 
 export const state = reactive({
   currentCommunity: {
@@ -13,17 +16,17 @@ export const state = reactive({
   },
   currentUser: {
     id: 'usr_guest',
-    nickname: hasLoggedInStorage ? '张先生' : '未登录游客',
-    avatar: hasLoggedInStorage ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250' : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
-    building: hasLoggedInStorage ? '5栋' : '未绑定门牌',
-    room: hasLoggedInStorage ? '302' : '',
-    isOwner: hasLoggedInStorage,
-    roleTag: hasLoggedInStorage ? '本小区住户' : '游客身份',
-    phone: hasLoggedInStorage ? (uni.getStorageSync('userPhone') || '138****8888') : ''
+    nickname: '未登录游客',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
+    building: '未绑定门牌',
+    room: '',
+    isOwner: false,
+    roleTag: '游客身份',
+    phone: ''
   },
-  isLoggedIn: hasLoggedInStorage,
-  showLoginModal: !hasLoggedInStorage,
-  userToken: uni.getStorageSync('userToken') || '',
+  isLoggedIn: false, // 初始置为未登录
+  showLoginModal: true, // 初始弹窗提示
+  userToken: '',
   myCommunities: [
     {
       id: 'comm_001',
@@ -46,6 +49,8 @@ export const useCommunityStore = () => {
     state.currentUser.nickname = (userInfo && userInfo.nickname) || '张先生'
     state.currentUser.avatar = (userInfo && userInfo.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
     state.currentUser.phone = (userInfo && userInfo.phone) || '138****8888'
+    state.currentUser.building = '5栋'
+    state.currentUser.room = '302'
     state.currentUser.roleTag = '本小区住户'
     state.currentUser.isOwner = true
     uni.setStorageSync('hasLoggedIn', true)
@@ -114,9 +119,7 @@ export const useCommunityStore = () => {
 
   // 清空/退出登录
   const clearLoginState = () => {
-    uni.removeStorageSync('hasLoggedIn')
-    uni.removeStorageSync('userToken')
-    uni.removeStorageSync('userPhone')
+    uni.clearStorageSync()
     state.isLoggedIn = false
     state.currentUser.nickname = '未登录游客'
     state.currentUser.avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
@@ -124,7 +127,7 @@ export const useCommunityStore = () => {
     state.currentUser.roleTag = '游客身份'
     state.currentUser.isOwner = false
     state.showLoginModal = true
-    uni.showToast({ title: '已退出登录，进入游客模式', icon: 'none' })
+    uni.showToast({ title: '已清空登录状态与缓存', icon: 'none' })
   }
 
   const syncWxProfile = async (newNickname, newAvatar) => {
