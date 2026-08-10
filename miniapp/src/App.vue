@@ -1,17 +1,8 @@
 <script>
-import { useCommunityStore } from '@/store/community'
-
 export default {
   onLaunch: function () {
     console.log('App Launch - 这儿有邻 社区小程序启动')
-    
-    // 进入小程序时尝试初始化微信登录授权
-    const communityStore = useCommunityStore()
-    if (typeof communityStore.initWxAuth === 'function') {
-      communityStore.initWxAuth()
-    } else if (typeof communityStore.performWxLogin === 'function') {
-      communityStore.performWxLogin()
-    }
+    // 保持静默启动，必须等待用户手动点击【微信一键快捷登录】按钮才触发登录
   },
   onShow: function () {
     console.log('App Show')

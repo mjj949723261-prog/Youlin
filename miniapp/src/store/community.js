@@ -1,9 +1,8 @@
 import { reactive } from 'vue'
 import { apiWxLogin, apiUpdateProfile } from '@/utils/api'
 
-// 强制清空本地登录缓存，满足调试重新登录测试需求
-uni.removeStorageSync('hasLoggedIn')
-uni.removeStorageSync('userToken')
+// 检查离线缓存是否已有已登录标记
+const hasLoggedInStorage = uni.getStorageSync('hasLoggedIn') === true
 
 export const state = reactive({
   currentCommunity: {
@@ -22,9 +21,9 @@ export const state = reactive({
     isOwner: true,
     roleTag: '本小区住户'
   },
-  isLoggedIn: false, // 强制初始化为未登录
-  showLoginModal: true, // 强制显示全屏登录弹窗
-  userToken: '',
+  isLoggedIn: hasLoggedInStorage,
+  showLoginModal: !hasLoggedInStorage, // 如果未登录，严格保持显示弹窗阻断
+  userToken: uni.getStorageSync('userToken') || '',
   myCommunities: [
     {
       id: 'comm_001',
@@ -50,6 +49,7 @@ export const useCommunityStore = () => {
     uni.setStorageSync('hasLoggedIn', true)
   }
 
+  // 必须用户手动点击微信登录按钮才触发调用
   const performWxLogin = async () => {
     return new Promise((resolve) => {
       // #ifdef MP-WEIXIN
@@ -87,7 +87,7 @@ export const useCommunityStore = () => {
     uni.removeStorageSync('userToken')
     state.isLoggedIn = false
     state.showLoginModal = true
-    uni.showToast({ title: '已清空登录信息，请重新登录', icon: 'none' })
+    uni.showToast({ title: '已重置登录信息，请重新登录', icon: 'none' })
   }
 
   const syncWxProfile = async (newNickname, newAvatar) => {
