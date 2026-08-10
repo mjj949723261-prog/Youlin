@@ -3,11 +3,15 @@ import { useCommunityStore } from '@/store/community'
 
 export default {
   onLaunch: function () {
-    console.log('App Launch - 友邻 Youlin 社区小程序启动')
+    console.log('App Launch - 这儿有邻 社区小程序启动')
     
-    // 进入小程序自动执行微信静默登录授权
+    // 进入小程序时尝试初始化微信登录授权
     const communityStore = useCommunityStore()
-    communityStore.initWxAuth()
+    if (typeof communityStore.initWxAuth === 'function') {
+      communityStore.initWxAuth()
+    } else if (typeof communityStore.performWxLogin === 'function') {
+      communityStore.performWxLogin()
+    }
   },
   onShow: function () {
     console.log('App Show')

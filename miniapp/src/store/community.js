@@ -100,6 +100,7 @@ export const useCommunityStore = () => {
     currentCommunity: state.currentCommunity,
     myCommunities: state.myCommunities,
     performWxLogin,
+    initWxAuth: performWxLogin, // 兼容导出 initWxAuth 函数签名
     setSuccessState,
     syncWxProfile,
     switchCommunity
