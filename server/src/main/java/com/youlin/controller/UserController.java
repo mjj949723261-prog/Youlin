@@ -37,6 +37,7 @@ public class UserController {
             user.setIsOwner(true);
             user.setRoleTag("本小区住户");
             user.setCommunityId("comm_001");
+            user.setPhone("138****8888");
             userMapper.insert(user);
         }
 
@@ -61,8 +62,41 @@ public class UserController {
             if (updateUser.getAvatar() != null && !updateUser.getAvatar().isEmpty()) {
                 user.setAvatar(updateUser.getAvatar());
             }
+            if (updateUser.getPhone() != null && !updateUser.getPhone().isEmpty()) {
+                user.setPhone(updateUser.getPhone());
+            }
             userMapper.updateById(user);
         }
         return Result.success("微信用户信息同步成功", user);
+    }
+
+    /**
+     * 微信手机号一键授权绑定 (getPhoneNumber code 验签绑定)
+     */
+    @PostMapping("/bind-phone")
+    public Result<User> bindPhone(@RequestBody Map<String, String> body) {
+        String phoneCode = body.get("phoneCode");
+        String rawPhone = body.get("phone");
+
+        // 模拟调用微信接口 api.weixin.qq.com/wxa/business/getuserphonenumber 换取手机号
+        String boundPhone = "13888889999";
+        if (rawPhone != null && !rawPhone.isEmpty()) {
+            boundPhone = rawPhone;
+        } else if (phoneCode != null && phoneCode.length() >= 6) {
+            boundPhone = "138" + phoneCode.substring(0, 4) + "88";
+        }
+        
+        // 生成手机号脱敏掩码 (如 138****8888)
+        String maskedPhone = boundPhone.length() == 11 
+            ? boundPhone.substring(0, 3) + "****" + boundPhone.substring(7) 
+            : boundPhone;
+
+        User user = userMapper.selectById("usr_888");
+        if (user != null) {
+            user.setPhone(maskedPhone);
+            userMapper.updateById(user);
+        }
+
+        return Result.success("微信手机号快捷授权绑定成功", user);
     }
 }

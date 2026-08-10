@@ -16,6 +16,7 @@ public class User {
     private Boolean isOwner;
     private String roleTag;
     private String communityId;
+    private String phone;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -33,4 +34,6 @@ public class User {
     public void setRoleTag(String roleTag) { this.roleTag = roleTag; }
     public String getCommunityId() { return communityId; }
     public void setCommunityId(String communityId) { this.communityId = communityId; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 }
