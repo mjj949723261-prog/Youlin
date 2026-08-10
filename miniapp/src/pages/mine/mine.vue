@@ -1,172 +1,123 @@
 <template>
   <view class="mine-container">
-    <!-- 1. 顶部用户高感度个人卡片 Header -->
-    <view class="user-profile-card" :style="{ paddingTop: (statusBarHeight + 16) + 'px' }">
-      <view class="user-row">
-        <image class="avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" @click="onEditProfile" />
-        <view class="user-info">
-          <view class="name-line" @click="onEditProfile">
-            <text class="user-name">{{ communityStore.currentUser.nickname }}</text>
-            <view class="verified-tag">
-              <text class="shield-icon">🛡️</text>
-              <text class="tag-text">业主已认证</text>
-            </view>
+    <!-- 1. 顶部个人基本信息名片卡片 (微信授权同步) -->
+    <view class="user-profile-card">
+      <view class="avatar-wrapper">
+        <!-- 微信官方最新快捷选择头像按钮 -->
+        <button class="wx-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
+          <image class="user-avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" />
+          <view class="avatar-edit-badge">
+            <text class="camera-icon">📷</text>
           </view>
-
-          <!-- 房产绑定门牌号信息 -->
-          <view class="property-line" @click="onSwitchProperty">
-            <text class="location-icon">🏡</text>
-            <text class="property-text">
-              {{ communityStore.currentCommunity.name }} {{ communityStore.currentUser.building }}{{ communityStore.currentUser.room }}
-            </text>
-            <text class="switch-arrow">切换 ›</text>
-          </view>
-        </view>
+        </button>
       </view>
 
-      <!-- 2. 个人互动数据快捷条 -->
-      <view class="stats-row">
-        <view class="stat-item" @click="onNavToMyPosts('ALL')">
-          <text class="stat-num">12</text>
-          <text class="stat-label">我的发帖</text>
+      <view class="profile-info">
+        <view class="name-line">
+          <input
+            type="nickname"
+            class="nickname-input"
+            v-model="inputNickname"
+            placeholder="点击同步微信昵称"
+            @blur="onNicknameBlur"
+          />
+          <text class="owner-badge">🛡️ 业主已认证</text>
         </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item" @click="onNavToMyPosts('HELP')">
-          <text class="stat-num">3</text>
-          <text class="stat-label">邻里求助</text>
-        </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item" @click="onNavToMyPosts('IDLE')">
-          <text class="stat-num">5</text>
-          <text class="stat-label">闲置面交</text>
-        </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item" @click="onNavToMyFav">
-          <text class="stat-num">18</text>
-          <text class="stat-label">我的收藏</text>
+
+        <text class="house-desc">云彩之城 1期 · 5栋 302室</text>
+        <text class="community-belong">隶属：新塘街道彩虹社区</text>
+
+        <!-- 微信账号同步状态标记 -->
+        <view class="sync-status-strip" @click="triggerWxSync">
+          <text class="status-icon">🟢</text>
+          <text class="status-text">已与微信账号绑定登录 (点击可重新同步头像昵称)</text>
         </view>
       </view>
     </view>
 
-    <!-- 3. 主体功能菜单区 -->
-    <scroll-view scroll-y class="mine-scroll-body">
-      
-      <!-- 核心社区房产与资产管理组 -->
-      <view class="menu-group">
-        <text class="group-title">社区与房产管理</text>
-        
-        <view class="menu-item" @click="onNavToProperty">
+    <!-- 2. 社区房产列表卡片 (支持多房产切换) -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">我的社区房产</text>
+        <text class="add-house-btn" @click="onAddHouse">+ 绑定新房产</text>
+      </view>
+
+      <view class="house-list">
+        <view
+          v-for="house in communityStore.myCommunities"
+          :key="house.id"
+          class="house-item"
+          :class="{ active: house.id === communityStore.currentCommunity.id }"
+          @click="onSwitchHouse(house)"
+        >
+          <view class="house-left">
+            <text class="house-icon">🏡</text>
+            <view class="house-meta">
+              <text class="house-name">{{ house.name }}</text>
+              <text class="house-detail">{{ house.building }}</text>
+            </view>
+          </view>
+          <text v-if="house.id === communityStore.currentCommunity.id" class="current-tag">当前选择</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 3. 互动统计卡片 -->
+    <view class="stats-row">
+      <view class="stat-card" @click="onMyPosts">
+        <text class="stat-num">12</text>
+        <text class="stat-label">我的动态</text>
+      </view>
+      <view class="stat-card" @click="onMyReplies">
+        <text class="stat-num">38</text>
+        <text class="stat-label">收到回复</text>
+      </view>
+      <view class="stat-card" @click="onMyLikes">
+        <text class="stat-num">95</text>
+        <text class="stat-label">获得的赞</text>
+      </view>
+    </view>
+
+    <!-- 4. 商业化增值功能入口 -->
+    <view class="section-card">
+      <text class="section-title margin-bottom">社区高级服务 (商业扩展预留)</text>
+
+      <view class="menu-list">
+        <view class="menu-item" @click="onOpenVip">
           <view class="menu-left">
-            <text class="menu-icon">🏢</text>
-            <text class="menu-label">我的房产与同住人</text>
+            <text class="menu-icon">👑</text>
+            <text class="menu-label">社区 VIP 业主权益特权包</text>
           </view>
           <view class="menu-right">
-            <text class="menu-sub-tip">云彩之城 1套房产</text>
+            <text class="vip-tag">首月 ¥9.9</text>
             <text class="arrow">›</text>
           </view>
         </view>
 
-        <view class="menu-item" @click="onNavToMyPosts('ALL')">
+        <view class="menu-item" @click="onOpenParking">
           <view class="menu-left">
-            <text class="menu-icon">📝</text>
-            <text class="menu-label">我的发帖与回复记录</text>
+            <text class="menu-icon">🅿️</text>
+            <text class="menu-label">车位共享出租 / 智能便民找车位</text>
           </view>
           <view class="menu-right">
+            <text class="menu-badge">热热门</text>
             <text class="arrow">›</text>
           </view>
         </view>
 
-        <view class="menu-item" @click="onNavToNotice">
+        <view class="menu-item" @click="onOpenCleaning">
           <view class="menu-left">
-            <text class="menu-icon">🔔</text>
-            <text class="menu-label">消息通知中心</text>
+            <text class="menu-icon">🧹</text>
+            <text class="menu-label">专属家政保洁 / 抽油烟机清洗直订</text>
           </view>
           <view class="menu-right">
-            <text class="unread-badge">2条新消息</text>
+            <text class="menu-sub">邻里团购价</text>
             <text class="arrow">›</text>
           </view>
         </view>
       </view>
+    </view>
 
-      <!-- 4. 辅助收费与物业增值服务预留组 (后期定制与收费项目) -->
-      <view class="menu-group">
-        <view class="group-header-row">
-          <text class="group-title">物业增值与便捷服务</text>
-          <text class="paid-feature-tag">辅助定制服务</text>
-        </view>
-        
-        <view class="menu-item" @click="onFeatureReserved('手机门禁与蓝牙开门')">
-          <view class="menu-left">
-            <text class="menu-icon">🔑</text>
-            <text class="menu-label">手机门禁与蓝牙开门</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">未开通</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onFeatureReserved('物业费与停车费缴纳')">
-          <view class="menu-left">
-            <text class="menu-icon">💳</text>
-            <text class="menu-label">物业费与停车费缴纳</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">按月缴费</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onFeatureReserved('公区工单与报修记录')">
-          <view class="menu-left">
-            <text class="menu-icon">🛠️</text>
-            <text class="menu-label">公区工单与报修记录</text>
-          </view>
-          <view class="menu-right">
-            <text class="arrow">›</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 5. 邻里工具与系统设置 -->
-      <view class="menu-group">
-        <text class="group-title">工具与支持</text>
-
-        <view class="menu-item" @click="onInviteNeighbor">
-          <view class="menu-left">
-            <text class="menu-icon">💌</text>
-            <text class="menu-label">邀请邻居入驻云彩之城</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">共享生成邀请码</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onCallProperty">
-          <view class="menu-left">
-            <text class="menu-icon">📞</text>
-            <text class="menu-label">新塘街道彩虹社区 / 物业电话</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">一键拨打</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onFeedback">
-          <view class="menu-left">
-            <text class="menu-icon">💬</text>
-            <text class="menu-label">意见反馈与建议</text>
-          </view>
-          <view class="menu-right">
-            <text class="arrow">›</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="bottom-space"></view>
-    </scroll-view>
   </view>
 </template>
 
@@ -175,139 +126,150 @@ import { ref, onMounted } from 'vue'
 import { useCommunityStore } from '@/store/community'
 
 const communityStore = useCommunityStore()
-const statusBarHeight = ref(44)
+const inputNickname = ref('')
 
 onMounted(() => {
-  const sysInfo = uni.getSystemInfoSync()
-  if (sysInfo.statusBarHeight) {
-    statusBarHeight.value = sysInfo.statusBarHeight
-  }
+  inputNickname.value = communityStore.currentUser.nickname || '微信用户'
 })
 
-// 修改资料
-const onEditProfile = () => {
-  uni.showToast({ title: '修改个人资料/头像...', icon: 'none' })
+// 微信官方快捷获取头像回调
+const onChooseWxAvatar = (e) => {
+  if (e.detail && e.detail.avatarUrl) {
+    const newAvatar = e.detail.avatarUrl
+    communityStore.syncWxProfile(null, newAvatar)
+    uni.showToast({ title: '已同步微信头像', icon: 'success' })
+  }
 }
 
-// 切换房产/小区
-const onSwitchProperty = () => {
-  uni.showActionSheet({
-    itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.building + ')'),
+// 微信官方快捷获取昵称回调
+const onNicknameBlur = (e) => {
+  const newName = e.detail.value || inputNickname.value
+  if (newName) {
+    communityStore.syncWxProfile(newName, null)
+    uni.showToast({ title: '已同步微信昵称', icon: 'success' })
+  }
+}
+
+// 手动触发微信重新授权登录同步
+const triggerWxSync = async () => {
+  uni.showLoading({ title: '正在同步微信登录...' })
+  await communityStore.initWxAuth()
+  uni.hideLoading()
+  uni.showToast({ title: '微信账号已同步最新登录态', icon: 'success' })
+}
+
+const onSwitchHouse = (house) => {
+  communityStore.switchCommunity(house)
+  uni.showToast({ title: '已切换至: ' + house.name, icon: 'none' })
+}
+
+const onAddHouse = () => {
+  uni.showModal({
+    title: '绑定新房产认证',
+    content: '请联系【新塘街道彩虹社区】物业管家获取房间专属认证邀请码。',
+    showCancel: false
+  })
+}
+
+const onMyPosts = () => { uni.showToast({ title: '已进入我的动态', icon: 'none' }) }
+const onMyReplies = () => { uni.showToast({ title: '已进入回复列表', icon: 'none' }) }
+const onMyLikes = () => { uni.showToast({ title: '已进入获赞列表', icon: 'none' }) }
+
+const onOpenVip = () => {
+  uni.showModal({
+    title: '👑 社区 VIP 业主权益特权包',
+    content: '解锁家政折扣、优先修缮派单、免费二手闲置极速曝光等 8 大社区专属特权！',
+    confirmText: '立即开通',
     success: (res) => {
-      communityStore.switchCommunity(communityStore.myCommunities[res.tapIndex])
+      if (res.confirm) {
+        uni.showToast({ title: '调起微信支付...', icon: 'none' })
+      }
     }
   })
 }
 
-// 查看我的发帖
-const onNavToMyPosts = (type) => {
+const onOpenParking = () => {
   uni.showModal({
-    title: '📝 我的发帖与回复记录',
-    content: '您在【云彩之城】共发布了 12 条动态，包括 3 条邻里求助与 5 条闲置面交。',
+    title: '🅿️ 邻里共享车位',
+    content: '业主闲置车位按时段出租，临时停靠省心划算！',
     showCancel: false
   })
 }
 
-// 查看我的收藏
-const onNavToMyFav = () => {
-  uni.showToast({ title: '查看我的收藏...', icon: 'none' })
-}
-
-// 房产管理
-const onNavToProperty = () => {
+const onOpenCleaning = () => {
   uni.showModal({
-    title: '🏢 我的房产认证',
-    content: `当前绑定：${communityStore.currentCommunity.name} ${communityStore.currentUser.building}${communityStore.currentUser.room}\n身份状态：业主认证`,
+    title: '🧹 社区品质家政预订',
+    content: '彩虹社区合作优质家政公司，业主专属团购价 85 折！',
     showCancel: false
   })
-}
-
-// 消息中心
-const onNavToNotice = () => {
-  uni.showModal({
-    title: '🔔 消息通知中心',
-    content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区公告：新塘街道彩虹社区正式成立通知',
-    showCancel: false
-  })
-}
-
-// 预留辅助收费功能接口点击提示
-const onFeatureReserved = (featureName) => {
-  uni.showModal({
-    title: `⚙️ ${featureName}`,
-    content: `【${featureName}】为辅助定制功能（后期增值收费项目），目前接口已全量预留，可随时对接小区物业门禁与缴费系统！`,
-    showCancel: false
-  })
-}
-
-// 邀请邻居
-const onInviteNeighbor = () => {
-  uni.showModal({
-    title: '💌 邀请邻居入驻',
-    content: '感谢您邀请邻居加入【云彩之城】社区交流圈！转发分享小程序即可邀请邻居完成房产认证。',
-    showCancel: false
-  })
-}
-
-// 拨打物业/社区电话
-const onCallProperty = () => {
-  uni.showActionSheet({
-    itemList: ['拨打 彩虹社区服务中心: 0571-88889999', '拨打 云彩之城物业处: 0571-66668888'],
-    success: (res) => {
-      const num = res.tapIndex === 0 ? '057188889999' : '057166668888'
-      uni.makePhoneCall({ phoneNumber: num })
-    }
-  })
-}
-
-// 反馈
-const onFeedback = () => {
-  uni.showToast({ title: '感谢您的意见反馈！', icon: 'none' })
 }
 </script>
 
 <style scoped>
 .mine-container {
-  height: 100vh;
+  padding: 16px;
   background-color: #F0F7F4;
-  display: flex;
-  flex-direction: column;
+  min-height: 100vh;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
-/* 1. 顶部用户 Profile 卡片 Header */
 .user-profile-card {
-  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
-  padding-left: 20px;
-  padding-right: 20px;
-  padding-bottom: 24px;
-  border-radius: 0 0 28px 28px;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
-  color: #FFFFFF;
-  flex-shrink: 0;
-}
-
-.user-row {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.05);
 }
 
-.avatar {
+.avatar-wrapper {
+  position: relative;
+}
+
+.wx-avatar-btn {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  line-height: 1;
+  border-radius: 50%;
+  overflow: visible;
+  position: relative;
+}
+
+.user-avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #E6F4EA;
+  display: block;
 }
 
-.user-info {
+.avatar-edit-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #10B981;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #FFF;
+}
+
+.camera-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.profile-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1;
+  gap: 4px;
 }
 
 .name-line {
@@ -316,165 +278,196 @@ const onFeedback = () => {
   gap: 8px;
 }
 
-.user-name {
-  font-size: 20px;
-  font-weight: 800;
-  color: #FFFFFF;
-}
-
-.verified-tag {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
-  padding: 3px 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.shield-icon {
-  font-size: 11px;
-}
-
-.tag-text {
-  font-size: 11px;
-  font-weight: 700;
-  color: #FFFFFF;
-}
-
-.property-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.12);
-  padding: 4px 10px;
-  border-radius: 14px;
-  width: fit-content;
-}
-
-.location-icon {
-  font-size: 12px;
-}
-
-.property-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #E6F4EA;
-}
-
-.switch-arrow {
-  font-size: 11px;
-  color: #A7F3D0;
-  margin-left: 2px;
-}
-
-/* 2. 交互数据快捷栏 */
-.stats-row {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(6px);
-  border-radius: 16px;
-  padding: 14px 10px;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.stat-num {
+.nickname-input {
   font-size: 18px;
   font-weight: 800;
-  color: #FFFFFF;
+  color: #111827;
+  width: 110px;
+  height: 24px;
 }
 
-.stat-label {
-  font-size: 11px;
-  color: #E6F4EA;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* 主体功能分组区 */
-.mine-scroll-body {
-  flex: 1;
-  height: 0;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.menu-group {
-  background: #FFFFFF;
-  border-radius: 20px;
-  padding: 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.04);
-}
-
-.group-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.group-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #6B7280;
-  margin-bottom: 10px;
-  display: block;
-}
-
-.group-header-row .group-title {
-  margin-bottom: 0;
-}
-
-.paid-feature-tag {
+.owner-badge {
   font-size: 10px;
   font-weight: 700;
   color: #D97706;
   background: #FEF3C7;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 6px;
+}
+
+.house-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.community-belong {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.sync-status-strip {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F0FDF4;
+  padding: 2px 6px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.status-icon {
+  font-size: 8px;
+}
+
+.status-text {
+  font-size: 9px;
+  color: #166534;
+}
+
+.section-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.03);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.margin-bottom {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.add-house-btn {
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.house-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.house-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid transparent;
+}
+
+.house-item.active {
+  background: #E6F4EA;
+  border-color: #10B981;
+}
+
+.house-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.house-icon {
+  font-size: 20px;
+}
+
+.house-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.house-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.house-detail {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.current-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  flex: 1;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.03);
+}
+
+.stat-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: #059669;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .menu-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
+  padding-bottom: 12px;
   border-bottom: 1px solid #F9FAFB;
-}
-
-.menu-item:last-child {
-  border-bottom: none;
 }
 
 .menu-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .menu-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .menu-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 600;
 }
 
 .menu-right {
@@ -483,26 +476,31 @@ const onFeedback = () => {
   gap: 6px;
 }
 
-.menu-sub-tip {
-  font-size: 12px;
-  color: #9CA3AF;
+.vip-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #DC2626;
+  background: #FEE2E2;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
-.unread-badge {
-  font-size: 11px;
+.menu-badge {
+  font-size: 10px;
   font-weight: 700;
-  color: #EF4444;
-  background: #FEE2E2;
-  padding: 2px 8px;
-  border-radius: 10px;
+  color: #D97706;
+  background: #FEF3C7;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.menu-sub {
+  font-size: 11px;
+  color: #9CA3AF;
 }
 
 .arrow {
   font-size: 16px;
   color: #9CA3AF;
-}
-
-.bottom-space {
-  height: 80px;
 }
 </style>

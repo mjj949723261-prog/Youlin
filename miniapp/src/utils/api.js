@@ -1,7 +1,6 @@
-// 友邻 Youlin - Uni-app 统一 API 网络请求封装 (支持本地与后端无缝切合)
+// 友邻 Youlin - Uni-app 统一 API 网络请求封装 (包含微信授权登录与信息同步)
 const BASE_URL = 'http://localhost:8080/api/v1'
 
-// 兜底本地默认数据，防止后端断连时弹窗干扰
 const mockPosts = [
   {
     id: 1,
@@ -65,7 +64,6 @@ export const request = (options = {}) => {
         }
       },
       fail: (err) => {
-        // 静默处理连接失败，不向用户弹错误框，维持优雅降级
         console.warn('后端服务未联通或域名未配置，使用静默降级数据', err)
         resolve(null)
       }
@@ -73,6 +71,7 @@ export const request = (options = {}) => {
   })
 }
 
+// 核心后端 RESTful 接口封装
 export const apiGetCurrentCommunity = () => request({ url: '/community/current' })
 
 export const apiGetPostList = async (categoryKey = 'ALL') => {
@@ -80,7 +79,6 @@ export const apiGetPostList = async (categoryKey = 'ALL') => {
   if (data && Array.isArray(data)) {
     return data
   }
-  // 降级兜底
   return mockPosts.filter(p => categoryKey === 'ALL' || p.categoryKey === categoryKey)
 }
 
@@ -104,3 +102,7 @@ export const apiGetComments = async (postId) => {
 }
 
 export const apiAddComment = (data) => request({ url: '/comments', method: 'POST', data })
+
+// 微信授权登录与个人信息同步
+export const apiWxLogin = (code) => request({ url: '/user/wx-login', method: 'POST', data: { code } })
+export const apiUpdateProfile = (data) => request({ url: '/user/update-profile', method: 'POST', data })
