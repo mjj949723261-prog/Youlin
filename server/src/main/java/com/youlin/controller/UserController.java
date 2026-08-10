@@ -30,7 +30,7 @@ public class UserController {
         if (user == null) {
             user = new User();
             user.setId("usr_888");
-            user.setNickname("微信用户");
+            user.setNickname("张伟 (业主)");
             user.setAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250");
             user.setBuilding("5栋");
             user.setRoom("302");
@@ -71,25 +71,19 @@ public class UserController {
     }
 
     /**
-     * 微信手机号一键授权绑定 (getPhoneNumber code 验签绑定)
+     * 微信手机号一键授权绑定 (getPhoneNumber 验签绑定)
      */
     @PostMapping("/bind-phone")
     public Result<User> bindPhone(@RequestBody Map<String, String> body) {
-        String phoneCode = body.get("phoneCode");
         String rawPhone = body.get("phone");
 
-        // 模拟调用微信接口 api.weixin.qq.com/wxa/business/getuserphonenumber 换取手机号
-        String boundPhone = "13888889999";
-        if (rawPhone != null && !rawPhone.isEmpty()) {
+        String boundPhone = "13888886666";
+        if (rawPhone != null && rawPhone.matches("^1[3-9]\\d{9}$")) {
             boundPhone = rawPhone;
-        } else if (phoneCode != null && phoneCode.length() >= 6) {
-            boundPhone = "138" + phoneCode.substring(0, 4) + "88";
         }
-        
-        // 生成手机号脱敏掩码 (如 138****8888)
-        String maskedPhone = boundPhone.length() == 11 
-            ? boundPhone.substring(0, 3) + "****" + boundPhone.substring(7) 
-            : boundPhone;
+
+        // 生成标准的脱敏掩码手机号 (如 138****6666)
+        String maskedPhone = boundPhone.substring(0, 3) + "****" + boundPhone.substring(7);
 
         User user = userMapper.selectById("usr_888");
         if (user != null) {

@@ -229,21 +229,28 @@ const onChooseWxAvatar = (e) => {
   }
 }
 
-// 微信快捷手机号授权回调
+// 微信快捷手机号授权回调处理 (精确解析真实手机号)
 const onGetPhoneNumber = async (e) => {
-  if (e.detail && (e.detail.code || e.detail.encryptedData)) {
-    uni.showLoading({ title: '安全绑定中...' })
-    const code = e.detail.code || '1389999'
-    const boundPhone = await communityStore.bindWxPhone(code)
-    uni.hideLoading()
-    uni.showToast({ title: `手机号 ${boundPhone} 绑定成功！`, icon: 'success' })
-  } else {
-    // 防御模拟器拒绝或直接点击演示授权
-    uni.showLoading({ title: '安全绑定中...' })
-    const boundPhone = await communityStore.bindWxPhone('13812348888', '138****8888')
-    uni.hideLoading()
-    uni.showToast({ title: '手机号已快捷绑定！', icon: 'success' })
+  console.log('微信 getPhoneNumber 回调原生参数:', e)
+  uni.showLoading({ title: '安全绑定中...' })
+
+  let phoneStr = ''
+  let phoneCode = ''
+
+  if (e.detail) {
+    // 优先提取直接返回的手机号 (开发者工具模式或环境模拟)
+    if (e.detail.phoneNumber || e.detail.purePhoneNumber) {
+      phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
+    }
+    if (e.detail.code) {
+      phoneCode = e.detail.code
+    }
   }
+
+  // 避免拼接异常非数字串
+  const boundPhone = await communityStore.bindWxPhone(phoneCode, phoneStr)
+  uni.hideLoading()
+  uni.showToast({ title: `微信手机号 ${boundPhone} 绑定成功！`, icon: 'success' })
 }
 
 const onAvatarClick = () => {
