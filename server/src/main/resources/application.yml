@@ -1,28 +1,17 @@
 server:
   port: 8080
-  servlet:
-    context-path: /
 
 spring:
   application:
     name: youlin-server
-  
-  # H2 内存数据库配置
+
+  # H2 内存数据库配置 (零配置开箱即用)
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:youlindb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
+    url: jdbc:h2:mem:youlindb;DB_CLOSE_DELAY=-1;MODE=MYSQL
     username: sa
     password: 
-  
-  # SQL 模式初始化
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      data-locations: classpath:data.sql
-      encoding: UTF-8
 
-  # 开启 H2 Web 控制台
   h2:
     console:
       enabled: true
@@ -30,14 +19,24 @@ spring:
       settings:
         web-allow-others: true
 
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+
 # MyBatis-Plus 配置
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
   global-config:
     db-config:
-      id-type: auto
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+# 微信小程序 AppID 配置
+wx:
+  miniapp:
+    appid: wxc3781b268c2b5fb8
