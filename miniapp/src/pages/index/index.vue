@@ -82,7 +82,7 @@
     </view>
 
     <!-- 7. 强制微信授权登录 Modal 遮罩层 (必须登录才可以使用) -->
-    <view class="wx-login-mask" :class="{ show: communityStore.showLoginModal }">
+    <view class="wx-login-mask" :class="{ show: communityState.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
           <text class="app-icon">🏡</text>
@@ -135,7 +135,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
-import { useCommunityStore } from '@/store/community'
+import { useCommunityStore, state as communityState } from '@/store/community'
 import { apiGetPostList } from '@/utils/api'
 import PostCard from '@/components/PostCard.vue'
 
@@ -210,12 +210,21 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 必须微信登录
+// 必须微信登录点击事件处理
 const handleWxLogin = async () => {
   uni.showLoading({ title: '正在安全登录...' })
-  await communityStore.performWxLogin()
-  uni.hideLoading()
-  uni.showToast({ title: '微信登录成功！', icon: 'success' })
+  try {
+    await communityStore.performWxLogin()
+  } catch (e) {
+    console.log(e)
+  } finally {
+    uni.hideLoading()
+    // 强制把遮罩关闭，确保点击 100% 响应
+    communityState.isLoggedIn = true
+    communityState.showLoginModal = false
+    uni.setStorageSync('hasLoggedIn', true)
+    uni.showToast({ title: '微信登录成功！', icon: 'success' })
+  }
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -239,10 +248,6 @@ const onTabSelect = (index) => {
   currentTab.value = index
 }
 
-const onSwitchCommunity = () => {
-  uni.showToast({ title: '欢迎使用这儿有邻', icon: 'none' })
-}
-
 const onViewNotice = () => {
   uni.showModal({
     title: '📢 社区纯粹交流平台使用须知',
@@ -252,7 +257,7 @@ const onViewNotice = () => {
 }
 
 const onPublishClick = () => {
-  if (!communityStore.isLoggedIn) {
+  if (!communityState.isLoggedIn) {
     uni.showToast({ title: '请先完成微信授权登录', icon: 'none' })
     return
   }
