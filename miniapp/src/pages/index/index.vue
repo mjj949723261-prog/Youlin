@@ -3,7 +3,7 @@
     <!-- 1. 自定义顶部 Header 栏 -->
     <view class="custom-header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="header-content">
-        <image class="user-avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" />
+        <image class="user-avatar" :src="communityState.currentUser.avatar" mode="aspectFill" />
         <view class="community-selector">
           <text class="location-icon">🏡</text>
           <text class="community-name">这儿有邻</text>
@@ -81,7 +81,7 @@
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 7. 强制微信授权登录 Modal 遮罩层 (必须登录才可以使用) -->
+    <!-- 7. 微信授权登录 Modal 遮罩层 (支持游客先逛逛与微信登录) -->
     <view class="wx-login-mask" :class="{ show: communityState.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
@@ -89,12 +89,14 @@
           <text class="app-title">欢迎使用 这儿有邻</text>
         </view>
         <text class="login-sub">邻里纯粹交流与互助平台</text>
-        <text class="login-desc">为保障社区真实交流与用户隐私安全，使用小程序必须先完成微信授权登录。</text>
+        <text class="login-desc">微信授权登录后可解锁发帖互动、社区服务与专属门牌身份。</text>
 
         <button class="wx-login-btn" @click="handleWxLogin">
           <text class="wx-icon">💬</text>
           <text class="btn-text">微信一键快捷登录</text>
         </button>
+
+        <text class="guest-btn" @click="handleGuestLook">👀 暂不登录，以游客身份先逛逛</text>
       </view>
     </view>
 
@@ -210,7 +212,7 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 必须微信登录点击事件处理
+// 微信登录点击
 const handleWxLogin = async () => {
   uni.showLoading({ title: '正在安全登录...' })
   try {
@@ -219,12 +221,16 @@ const handleWxLogin = async () => {
     console.log(e)
   } finally {
     uni.hideLoading()
-    // 强制把遮罩关闭，确保点击 100% 响应
     communityState.isLoggedIn = true
     communityState.showLoginModal = false
     uni.setStorageSync('hasLoggedIn', true)
     uni.showToast({ title: '微信登录成功！', icon: 'success' })
   }
+}
+
+// 点击暂不登录，进入游客模式
+const handleGuestLook = () => {
+  communityStore.enterGuestMode()
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -256,9 +262,20 @@ const onViewNotice = () => {
   })
 }
 
+// 核心要求：发帖必须登录！游客点击弹出引导
 const onPublishClick = () => {
   if (!communityState.isLoggedIn) {
-    uni.showToast({ title: '请先完成微信授权登录', icon: 'none' })
+    uni.showModal({
+      title: '🔒 登录提醒',
+      content: '发布邻里交流动态需要先完成微信登录授权，是否立即登录？',
+      confirmText: '去微信登录',
+      cancelText: '再逛逛',
+      success: (res) => {
+        if (res.confirm) {
+          communityState.showLoginModal = true
+        }
+      }
+    })
     return
   }
   uni.navigateTo({
@@ -532,7 +549,6 @@ const onPostDetail = (id) => {
   margin-top: -2px;
 }
 
-/* 强约束全屏微信授权登录遮罩 (必须登录才可以使用) */
 .wx-login-mask {
   position: fixed;
   top: 0;
@@ -596,7 +612,7 @@ const onPostDetail = (id) => {
   color: #4B5563;
   line-height: 1.6;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: #F9FAFB;
   padding: 14px;
   border-radius: 14px;
@@ -613,6 +629,7 @@ const onPostDetail = (id) => {
   gap: 8px;
   box-shadow: 0 8px 20px rgba(7, 193, 96, 0.4);
   border: none;
+  margin-bottom: 12px;
 }
 
 .wx-icon {
@@ -624,6 +641,13 @@ const onPostDetail = (id) => {
   font-size: 16px;
   font-weight: 800;
   color: #FFFFFF;
+}
+
+.guest-btn {
+  font-size: 13px;
+  color: #6B7280;
+  padding: 6px 12px;
+  font-weight: 600;
 }
 
 .drawer-mask {

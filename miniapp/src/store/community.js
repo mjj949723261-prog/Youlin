@@ -1,33 +1,32 @@
 import { reactive } from 'vue'
 import { apiWxLogin, apiUpdateProfile } from '@/utils/api'
 
-// 检查离线缓存是否已有已登录标记
 const hasLoggedInStorage = uni.getStorageSync('hasLoggedIn') === true
 
 export const state = reactive({
   currentCommunity: {
     id: 'comm_001',
-    name: '我的社区',
+    name: '这儿有邻社区',
     subDistrictId: 'sub_101',
     subDistrictName: '社区服务中心',
     building: '1期'
   },
   currentUser: {
-    id: 'usr_888',
-    nickname: '微信用户',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-    building: '5栋',
-    room: '302',
-    isOwner: true,
-    roleTag: '本小区住户'
+    id: 'usr_guest',
+    nickname: hasLoggedInStorage ? '张先生' : '未登录游客',
+    avatar: hasLoggedInStorage ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250' : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
+    building: hasLoggedInStorage ? '5栋' : '未绑定门牌',
+    room: hasLoggedInStorage ? '302' : '',
+    isOwner: hasLoggedInStorage,
+    roleTag: hasLoggedInStorage ? '本小区住户' : '游客身份'
   },
   isLoggedIn: hasLoggedInStorage,
-  showLoginModal: !hasLoggedInStorage, // 如果未登录，严格保持显示弹窗阻断
+  showLoginModal: !hasLoggedInStorage,
   userToken: uni.getStorageSync('userToken') || '',
   myCommunities: [
     {
       id: 'comm_001',
-      name: '我的社区 1期',
+      name: '这儿有邻 1期',
       subDistrictId: 'sub_101',
       subDistrictName: '社区服务中心',
       building: '5栋 302室'
@@ -43,13 +42,14 @@ export const useCommunityStore = () => {
       state.userToken = token
       uni.setStorageSync('userToken', token)
     }
-    if (userInfo) {
-      Object.assign(state.currentUser, userInfo)
-    }
+    state.currentUser.nickname = (userInfo && userInfo.nickname) || '张先生'
+    state.currentUser.avatar = (userInfo && userInfo.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+    state.currentUser.roleTag = '本小区住户'
+    state.currentUser.isOwner = true
     uni.setStorageSync('hasLoggedIn', true)
   }
 
-  // 必须用户手动点击微信登录按钮才触发调用
+  // 微信授权登录
   const performWxLogin = async () => {
     return new Promise((resolve) => {
       // #ifdef MP-WEIXIN
@@ -82,12 +82,28 @@ export const useCommunityStore = () => {
     })
   }
 
+  // 进入游客模式 (暂不登录)
+  const enterGuestMode = () => {
+    state.showLoginModal = false
+    uni.showToast({ title: '已进入游客浏览模式', icon: 'none' })
+  }
+
+  // 弹出登录框
+  const openLoginModal = () => {
+    state.showLoginModal = true
+  }
+
+  // 清空/退出登录
   const clearLoginState = () => {
     uni.removeStorageSync('hasLoggedIn')
     uni.removeStorageSync('userToken')
     state.isLoggedIn = false
+    state.currentUser.nickname = '未登录游客'
+    state.currentUser.avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
+    state.currentUser.roleTag = '游客身份'
+    state.currentUser.isOwner = false
     state.showLoginModal = true
-    uni.showToast({ title: '已重置登录信息，请重新登录', icon: 'none' })
+    uni.showToast({ title: '已退出登录，进入游客模式', icon: 'none' })
   }
 
   const syncWxProfile = async (newNickname, newAvatar) => {
@@ -115,6 +131,8 @@ export const useCommunityStore = () => {
     myCommunities: state.myCommunities,
     performWxLogin,
     initWxAuth: performWxLogin,
+    enterGuestMode,
+    openLoginModal,
     clearLoginState,
     setSuccessState,
     syncWxProfile,

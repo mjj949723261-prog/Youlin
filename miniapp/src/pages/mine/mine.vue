@@ -1,57 +1,75 @@
 <template>
   <view class="mine-container">
-    <!-- 1. 顶部用户 Profile 卡片 Header (高颜值绿色渐变沉浸背景) -->
+    <!-- 1. 顶部用户 Profile 卡片 Header (适配游客模式与已登录模式) -->
     <view class="user-profile-card" :style="{ paddingTop: (statusBarHeight + 12) + 'px' }">
       <view class="user-row">
-        <!-- 微信头像一键快捷选择按钮 -->
-        <button class="wx-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
-          <image class="avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" />
+        <!-- 微信头像一键快捷选择按钮 (已登录) 或登录唤起 (游客) -->
+        <button
+          class="wx-avatar-btn"
+          :open-type="communityState.isLoggedIn ? 'chooseAvatar' : ''"
+          @chooseavatar="onChooseWxAvatar"
+          @click="onAvatarClick"
+        >
+          <image class="avatar" :src="communityState.currentUser.avatar" mode="aspectFill" />
           <view class="camera-badge">
-            <text class="camera-icon">📷</text>
+            <text class="camera-icon">{{ communityState.isLoggedIn ? '📷' : '🔒' }}</text>
           </view>
         </button>
 
         <view class="user-info">
-          <view class="name-line">
-            <!-- 微信快捷昵称填充组件 -->
-            <input
-              type="nickname"
-              class="nickname-input"
-              v-model="inputNickname"
-              placeholder="点击设置微信昵称"
-              @blur="onNicknameBlur"
-            />
-            <view class="verified-tag">
-              <text class="shield-icon">🛡️</text>
-              <text class="tag-text">业主认证</text>
+          <!-- 已登录状态下的姓名与业主认证 -->
+          <template v-if="communityState.isLoggedIn">
+            <view class="name-line">
+              <input
+                type="nickname"
+                class="nickname-input"
+                v-model="inputNickname"
+                placeholder="点击设置微信昵称"
+                @blur="onNicknameBlur"
+              />
+              <view class="verified-tag">
+                <text class="shield-icon">🛡️</text>
+                <text class="tag-text">业主认证</text>
+              </view>
             </view>
-          </view>
+            <view class="property-line" @click="onSwitchProperty">
+              <text class="location-icon">📍</text>
+              <text class="property-text">{{ communityStore.currentCommunity.name }} {{ communityStore.currentUser.building }} {{ communityStore.currentUser.room }}</text>
+              <text class="switch-arrow">⇌ 切换</text>
+            </view>
+          </template>
 
-          <!-- 绑定的社区与门牌信息 (可点击切换) -->
-          <view class="property-line" @click="onSwitchProperty">
-            <text class="location-icon">📍</text>
-            <text class="property-text">{{ communityStore.currentCommunity.name }} {{ communityStore.currentUser.building }} {{ communityStore.currentUser.room }}</text>
-            <text class="switch-arrow">⇌ 切换</text>
-          </view>
+          <!-- 游客模式下的引导卡片 -->
+          <template v-else>
+            <view class="name-line" @click="onTriggerLogin">
+              <text class="guest-name">未登录游客</text>
+              <view class="guest-tag">
+                <text class="tag-text">👀 游客模式</text>
+              </view>
+            </view>
+            <view class="login-guide-btn" @click="onTriggerLogin">
+              <text class="guide-text">💬 点击完成微信授权登录 ›</text>
+            </view>
+          </template>
         </view>
       </view>
 
       <!-- 2. 交互数据快捷栏 -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
-          <text class="stat-num">12</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? '12' : '--' }}</text>
           <text class="stat-label">我的发帖</text>
         </view>
         <view class="stat-divider"></view>
 
         <view class="stat-item" @click="onNavToMyPosts('REPLIES')">
-          <text class="stat-num">38</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? '38' : '--' }}</text>
           <text class="stat-label">收到回复</text>
         </view>
         <view class="stat-divider"></view>
 
         <view class="stat-item" @click="onNavToMyFav">
-          <text class="stat-num">95</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? '95' : '--' }}</text>
           <text class="stat-label">获得的点赞</text>
         </view>
       </view>
@@ -60,6 +78,18 @@
     <!-- 3. 主体功能分组区 (平滑滚动) -->
     <scroll-view scroll-y class="mine-scroll-body">
       
+      <!-- 游客专属快速登录卡片条 (未登录时醒目提醒) -->
+      <view v-if="!communityState.isLoggedIn" class="guest-banner-card" @click="onTriggerLogin">
+        <view class="guest-banner-left">
+          <text class="banner-icon">💬</text>
+          <view class="banner-texts">
+            <text class="banner-main">微信一键快捷登录</text>
+            <text class="banner-sub">解锁邻里动态发帖、盖楼评论与房产档案</text>
+          </view>
+        </view>
+        <text class="banner-action-btn">立即登录</text>
+      </view>
+
       <!-- 我的资产与业主服务 -->
       <view class="menu-group">
         <text class="group-title">业主服务与资产</text>
@@ -70,7 +100,7 @@
             <text class="menu-label">我的房产认证与档案</text>
           </view>
           <view class="menu-right">
-            <text class="menu-sub-tip">已认证 1套房产</text>
+            <text class="menu-sub-tip">{{ communityState.isLoggedIn ? '已认证 1套房产' : '未登录' }}</text>
             <text class="arrow">›</text>
           </view>
         </view>
@@ -81,7 +111,8 @@
             <text class="menu-label">社区消息与通知中心</text>
           </view>
           <view class="menu-right">
-            <text class="unread-badge">2 条未读</text>
+            <text v-if="communityState.isLoggedIn" class="unread-badge">2 条未读</text>
+            <text v-else class="menu-sub-tip">未登录</text>
             <text class="arrow">›</text>
           </view>
         </view>
@@ -117,17 +148,26 @@
         </view>
       </view>
 
-      <!-- 5. 邻里工具与退出登录调试 -->
+      <!-- 5. 账号管理 -->
       <view class="menu-group">
         <text class="group-title">账号与安全</text>
 
-        <view class="menu-item" @click="onResetLogin">
+        <view v-if="communityState.isLoggedIn" class="menu-item" @click="onResetLogin">
           <view class="menu-left">
             <text class="menu-icon">🚪</text>
-            <text class="menu-label" style="color: #DC2626;">退出并重新进行微信授权登录</text>
+            <text class="menu-label" style="color: #DC2626;">退出微信登录 (返回游客模式)</text>
           </view>
           <view class="menu-right">
-            <text class="menu-sub-tip">重置调试</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <view v-else class="menu-item" @click="onTriggerLogin">
+          <view class="menu-left">
+            <text class="menu-icon">🔑</text>
+            <text class="menu-label" style="color: #059669;">微信账号安全登录</text>
+          </view>
+          <view class="menu-right">
             <text class="arrow">›</text>
           </view>
         </view>
@@ -140,7 +180,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useCommunityStore } from '@/store/community'
+import { useCommunityStore, state as communityState } from '@/store/community'
 
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
@@ -151,13 +191,19 @@ onMounted(() => {
   if (sysInfo.statusBarHeight) {
     statusBarHeight.value = sysInfo.statusBarHeight
   }
-  inputNickname.value = communityStore.currentUser.nickname || '张先生'
+  inputNickname.value = communityStore.currentUser.nickname || '微信用户'
 })
 
 const onChooseWxAvatar = (e) => {
   if (e.detail && e.detail.avatarUrl) {
     communityStore.syncWxProfile(null, e.detail.avatarUrl)
     uni.showToast({ title: '已同步微信头像', icon: 'success' })
+  }
+}
+
+const onAvatarClick = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
   }
 }
 
@@ -169,14 +215,22 @@ const onNicknameBlur = (e) => {
   }
 }
 
-const onResetLogin = () => {
-  communityStore.clearLoginState()
+const onTriggerLogin = () => {
+  communityStore.openLoginModal()
   uni.switchTab({
     url: '/pages/index/index'
   })
 }
 
+const onResetLogin = () => {
+  communityStore.clearLoginState()
+}
+
 const onSwitchProperty = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showActionSheet({
     itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.building + ')'),
     success: (res) => {
@@ -186,6 +240,10 @@ const onSwitchProperty = () => {
 }
 
 const onNavToMyPosts = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showModal({
     title: '📝 我的发帖与回复记录',
     content: '您在【这儿有邻】共发布了 12 条动态。',
@@ -194,10 +252,18 @@ const onNavToMyPosts = () => {
 }
 
 const onNavToMyFav = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showToast({ title: '查看获得的点赞...', icon: 'none' })
 }
 
 const onNavToProperty = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showModal({
     title: '🏢 我的房产认证',
     content: `当前绑定：${communityStore.currentCommunity.name} ${communityStore.currentUser.building} ${communityStore.currentUser.room}\n身份状态：🛡️ 业主已认证`,
@@ -206,6 +272,10 @@ const onNavToProperty = () => {
 }
 
 const onNavToNotice = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showModal({
     title: '🔔 消息通知中心',
     content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区服务中心成立通知',
@@ -214,6 +284,10 @@ const onNavToNotice = () => {
 }
 
 const onFeatureReserved = (featureName) => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
   uni.showModal({
     title: `⚙️ ${featureName}`,
     content: `【${featureName}】为辅助功能，可随时对接物业门禁与缴费系统！`,
@@ -308,6 +382,12 @@ const onFeatureReserved = (featureName) => {
   height: 28px;
 }
 
+.guest-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
 .verified-tag {
   display: flex;
   align-items: center;
@@ -317,6 +397,12 @@ const onFeatureReserved = (featureName) => {
   padding: 3px 8px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.guest-tag {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 3px 8px;
+  border-radius: 12px;
 }
 
 .shield-icon {
@@ -337,6 +423,19 @@ const onFeatureReserved = (featureName) => {
   padding: 4px 10px;
   border-radius: 14px;
   width: fit-content;
+}
+
+.login-guide-btn {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 4px 10px;
+  border-radius: 14px;
+  width: fit-content;
+}
+
+.guide-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
 }
 
 .location-icon {
@@ -395,6 +494,53 @@ const onFeatureReserved = (featureName) => {
   height: 0;
   padding: 16px;
   box-sizing: border-box;
+}
+
+.guest-banner-card {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1px solid #6EE7B7;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.guest-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-icon {
+  font-size: 24px;
+}
+
+.banner-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-main {
+  font-size: 14px;
+  font-weight: 800;
+  color: #065F46;
+}
+
+.banner-sub {
+  font-size: 11px;
+  color: #047857;
+}
+
+.banner-action-btn {
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFFFFF;
+  background: #059669;
+  padding: 6px 12px;
+  border-radius: 14px;
 }
 
 .menu-group {
