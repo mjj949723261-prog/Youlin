@@ -19,7 +19,10 @@ export const state = reactive({
     room: hasLoggedInStorage ? '302' : '',
     isOwner: hasLoggedInStorage,
     roleTag: hasLoggedInStorage ? '本小区住户' : '游客身份',
-    phone: hasLoggedInStorage ? (uni.getStorageSync('userPhone') || '') : ''
+    phone: hasLoggedInStorage ? (uni.getStorageSync('userPhone') || '') : '',
+    city: uni.getStorageSync('userCity') || '广东·深圳',
+    province: uni.getStorageSync('userProvince') || '广东',
+    gender: uni.getStorageSync('userGender') || 1
   },
   isLoggedIn: hasLoggedInStorage,
   showLoginModal: !hasLoggedInStorage,
@@ -46,6 +49,7 @@ export const useCommunityStore = () => {
     state.currentUser.nickname = (userInfo && userInfo.nickname) ? userInfo.nickname : (uni.getStorageSync('userName') || '微信用户')
     state.currentUser.avatar = (userInfo && userInfo.avatar) ? userInfo.avatar : (uni.getStorageSync('userAvatar') || 'https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132')
     state.currentUser.phone = (userInfo && userInfo.phone) ? userInfo.phone : (uni.getStorageSync('userPhone') || '')
+    state.currentUser.city = (userInfo && userInfo.city) ? userInfo.city : (uni.getStorageSync('userCity') || '广东·深圳')
     state.currentUser.building = '5栋'
     state.currentUser.room = '302'
     state.currentUser.roleTag = '本小区住户'
@@ -55,6 +59,7 @@ export const useCommunityStore = () => {
     if (state.currentUser.nickname) uni.setStorageSync('userName', state.currentUser.nickname)
     if (state.currentUser.avatar) uni.setStorageSync('userAvatar', state.currentUser.avatar)
     if (state.currentUser.phone) uni.setStorageSync('userPhone', state.currentUser.phone)
+    if (state.currentUser.city) uni.setStorageSync('userCity', state.currentUser.city)
   }
 
   // 微信授权登录
@@ -85,6 +90,49 @@ export const useCommunityStore = () => {
       // #endif
       // #ifndef MP-WEIXIN
       setSuccessState()
+      resolve(true)
+      // #endif
+    })
+  }
+
+  // 调起 uni.getUserProfile / wx.getUserProfile 授权读取微信扩展资料
+  const fetchUserProfile = async () => {
+    return new Promise((resolve) => {
+      // #ifdef MP-WEIXIN
+      uni.getUserProfile({
+        desc: '用于完善社区居民归属地与个人资料',
+        success: async (res) => {
+          console.log('getUserProfile 成功返回:', res)
+          if (res.userInfo) {
+            const info = res.userInfo
+            if (info.nickName) state.currentUser.nickname = info.nickName
+            if (info.avatarUrl) state.currentUser.avatar = info.avatarUrl
+            if (info.city || info.province) {
+              state.currentUser.city = `${info.province || ''}·${info.city || ''}`
+            }
+            if (info.gender !== undefined) state.currentUser.gender = info.gender
+
+            uni.setStorageSync('userName', state.currentUser.nickname)
+            uni.setStorageSync('userAvatar', state.currentUser.avatar)
+            uni.setStorageSync('userCity', state.currentUser.city)
+
+            await apiUpdateProfile({
+              nickname: state.currentUser.nickname,
+              avatar: state.currentUser.avatar,
+              city: info.city,
+              province: info.province,
+              gender: info.gender
+            })
+          }
+          resolve(true)
+        },
+        fail: (err) => {
+          console.warn('getUserProfile 调用或拒绝对接:', err)
+          resolve(false)
+        }
+      })
+      // #endif
+      // #ifndef MP-WEIXIN
       resolve(true)
       // #endif
     })
@@ -160,6 +208,7 @@ export const useCommunityStore = () => {
     myCommunities: state.myCommunities,
     performWxLogin,
     initWxAuth: performWxLogin,
+    fetchUserProfile,
     bindWxPhone,
     enterGuestMode,
     openLoginModal,

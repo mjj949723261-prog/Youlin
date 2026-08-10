@@ -17,6 +17,9 @@ public class User {
     private String roleTag;
     private String communityId;
     private String phone;
+    private String city;
+    private String province;
+    private Integer gender;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -36,4 +39,10 @@ public class User {
     public void setCommunityId(String communityId) { this.communityId = communityId; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    public String getProvince() { return province; }
+    public void setProvince(String province) { this.province = province; }
+    public Integer getGender() { return gender; }
+    public void setGender(Integer gender) { this.gender = gender; }
 }

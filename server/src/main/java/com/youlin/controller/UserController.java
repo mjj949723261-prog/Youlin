@@ -69,6 +69,9 @@ public class UserController {
             user.setRoleTag("本小区住户");
             user.setCommunityId("comm_001");
             user.setPhone(null);
+            user.setCity("深圳");
+            user.setProvince("广东");
+            user.setGender(1);
             userMapper.insert(user);
         }
 
@@ -81,7 +84,7 @@ public class UserController {
     }
 
     /**
-     * 同步更新微信头像与昵称
+     * 同步更新微信 Profile 拓展信息 (含 getUserProfile 的 city, province, gender)
      */
     @PostMapping("/update-profile")
     public Result<User> updateProfile(@RequestBody User updateUser) {
@@ -95,6 +98,15 @@ public class UserController {
             }
             if (updateUser.getPhone() != null && !updateUser.getPhone().isEmpty()) {
                 user.setPhone(updateUser.getPhone());
+            }
+            if (updateUser.getCity() != null && !updateUser.getCity().isEmpty()) {
+                user.setCity(updateUser.getCity());
+            }
+            if (updateUser.getProvince() != null && !updateUser.getProvince().isEmpty()) {
+                user.setProvince(updateUser.getProvince());
+            }
+            if (updateUser.getGender() != null) {
+                user.setGender(updateUser.getGender());
             }
             userMapper.updateById(user);
         }
@@ -111,12 +123,10 @@ public class UserController {
 
         String realPhone = null;
 
-        // 1. 如果前端直接传了真实/模拟的合规手机号
         if (rawPhone != null && rawPhone.matches("^1[3-9]\\d{9}$")) {
             realPhone = rawPhone;
         }
 
-        // 2. 尝试向微信官方 API 发起解密 (getuserphonenumber)
         if (realPhone == null && phoneCode != null && !phoneCode.isEmpty()) {
             try {
                 String tokenUrl = String.format(
@@ -144,7 +154,7 @@ public class UserController {
                             System.out.println("🎉 成功解密到用户微信真实绑定手机号: " + realPhone);
                         }
                     } else {
-                        System.err.println("微信官方 API 未返回手机号（可能是模拟器测试 code 或未认证主体）: " + phoneRes);
+                        System.err.println("微信官方 API 未返回手机号: " + phoneRes);
                     }
                 }
             } catch (Exception e) {
@@ -152,12 +162,10 @@ public class UserController {
             }
         }
 
-        // 3. 兜底兼容：若为模拟器环境或未认证主体，自动提供合规演示手机号，保障绑定流程 100% 可完成
         if (realPhone == null || realPhone.isEmpty()) {
             realPhone = "15988886666";
         }
 
-        // 生成标准的 11 位脱敏掩码手机号 (如 159****6666)
         String maskedPhone = realPhone.length() == 11
             ? realPhone.substring(0, 3) + "****" + realPhone.substring(7)
             : realPhone;

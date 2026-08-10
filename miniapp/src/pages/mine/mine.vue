@@ -121,6 +121,19 @@
           </view>
         </view>
 
+        <!-- 新增：微信 getUserProfile 扩展资料一键同步项 -->
+        <view class="menu-item" @click="onCallGetUserProfile">
+          <view class="menu-left">
+            <text class="menu-icon">🌐</text>
+            <text class="menu-label">微信 getUserProfile 资料</text>
+          </view>
+          <view class="menu-right">
+            <text v-if="communityState.isLoggedIn" class="bound-phone-text">{{ communityState.currentUser.city || '点击同步' }}</text>
+            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
         <view class="menu-item" @click="onNavToProperty">
           <view class="menu-left">
             <text class="menu-icon">🏢</text>
@@ -229,7 +242,7 @@ const onChooseWxAvatar = (e) => {
   }
 }
 
-// 微信快捷手机号授权回调处理 (精确解析真实手机号)
+// 微信快捷手机号授权回调处理
 const onGetPhoneNumber = async (e) => {
   console.log('微信 getPhoneNumber 回调原生参数:', e)
   uni.showLoading({ title: '安全绑定中...' })
@@ -238,7 +251,6 @@ const onGetPhoneNumber = async (e) => {
   let phoneCode = ''
 
   if (e.detail) {
-    // 优先提取直接返回的手机号 (开发者工具模式或环境模拟)
     if (e.detail.phoneNumber || e.detail.purePhoneNumber) {
       phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
     }
@@ -247,10 +259,25 @@ const onGetPhoneNumber = async (e) => {
     }
   }
 
-  // 避免拼接异常非数字串
   const boundPhone = await communityStore.bindWxPhone(phoneCode, phoneStr)
   uni.hideLoading()
   uni.showToast({ title: `微信手机号 ${boundPhone} 绑定成功！`, icon: 'success' })
+}
+
+// 调起微信原生 getUserProfile 获取其他扩展信息
+const onCallGetUserProfile = async () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
+  uni.showLoading({ title: '拉取微信资料中...' })
+  const res = await communityStore.fetchUserProfile()
+  uni.hideLoading()
+  if (res) {
+    uni.showToast({ title: '微信资料及归属地已同步！', icon: 'success' })
+  } else {
+    uni.showToast({ title: '根据微信最新政策，请在上方直接选头像和填昵称', icon: 'none' })
+  }
 }
 
 const onAvatarClick = () => {

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS sys_community (
     sub_district_name VARCHAR(100)
 );
 
--- 2. 用户表 (包含微信绑定的手机号 phone 字段)
+-- 2. 用户表 (包含手机号 phone 及 getUserProfile 扩展地区与性别字段)
 CREATE TABLE IF NOT EXISTS sys_user (
     id VARCHAR(64) PRIMARY KEY,
     nickname VARCHAR(100),
@@ -16,7 +16,10 @@ CREATE TABLE IF NOT EXISTS sys_user (
     is_owner INT DEFAULT 1,
     role_tag VARCHAR(50),
     community_id VARCHAR(64),
-    phone VARCHAR(20)
+    phone VARCHAR(20),
+    city VARCHAR(50),
+    province VARCHAR(50),
+    gender INT DEFAULT 0
 );
 
 -- 3. 帖子表
