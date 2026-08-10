@@ -81,7 +81,25 @@
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 7. 右侧平滑动画抽屉筛选弹窗 -->
+    <!-- 7. 微信一键授权登录 Modal 弹窗 -->
+    <view class="wx-login-mask" :class="{ show: communityStore.showLoginModal }">
+      <view class="wx-login-card">
+        <view class="login-header">
+          <text class="app-icon">🏡</text>
+          <text class="app-title">欢迎进入【云彩之城】社区圈</text>
+        </view>
+        <text class="login-sub">新塘街道彩虹社区 · 邻里纯粹互助平台</text>
+        <text class="login-desc">为保障本小区邻里真实交流与业主隐私安全，进入小程序请先完成微信授权登录。</text>
+
+        <button class="wx-login-btn" @click="handleWxLogin">
+          <text class="wx-icon">💬</text>
+          <text class="btn-text">微信一键快捷登录</text>
+        </button>
+        <text class="cancel-login-btn" @click="handleGuestLook">暂不登录，先浏览公告</text>
+      </view>
+    </view>
+
+    <!-- 8. 右侧平滑动画抽屉筛选弹窗 -->
     <view class="drawer-mask" :class="{ show: showDrawer }" @click="closeFilterDrawer"></view>
     <view class="drawer-panel" :class="{ show: showDrawer }">
       <view class="drawer-header">
@@ -133,7 +151,6 @@ const selectedCategory = ref('ALL')
 const isRefreshing = ref(false)
 const lastRefreshTimeText = ref('')
 
-// 获取当前的 HH:mm:ss 格式精细时间文本
 const getNowTimeStr = () => {
   const now = new Date()
   const hh = String(now.getHours()).padStart(2, '0')
@@ -154,7 +171,6 @@ const categoryOptions = ref([
 
 const posts = ref([])
 
-// 加载/刷新列表数据
 const fetchPostList = async (showToast = false) => {
   isRefreshing.value = true
   try {
@@ -193,6 +209,19 @@ onPullDownRefresh(() => {
 
 const manualRefresh = () => {
   fetchPostList(true)
+}
+
+// 点击微信一键授权登录
+const handleWxLogin = async () => {
+  uni.showLoading({ title: '正在安全授权...' })
+  await communityStore.performWxLogin()
+  uni.hideLoading()
+  uni.showToast({ title: '微信登录成功！', icon: 'success' })
+}
+
+// 暂不登录
+const handleGuestLook = () => {
+  communityStore.closeLoginModal()
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -234,6 +263,10 @@ const onViewNotice = () => {
 }
 
 const onPublishClick = () => {
+  if (!communityStore.isLoggedIn) {
+    uni.showToast({ title: '请先完成微信授权登录', icon: 'none' })
+    return
+  }
   uni.navigateTo({
     url: '/pages/publish/publish'
   })
@@ -503,6 +536,107 @@ const onPostDetail = (id) => {
   font-weight: 300;
   line-height: 1;
   margin-top: -2px;
+}
+
+/* 微信一键授权登录高颜值弹窗 */
+.wx-login-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.wx-login-mask.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wx-login-card {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.login-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.app-icon {
+  font-size: 24px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.login-sub {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.login-desc {
+  font-size: 13px;
+  color: #4B5563;
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 20px;
+  background: #F9FAFB;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.wx-login-btn {
+  width: 100%;
+  height: 46px;
+  border-radius: 23px;
+  background: linear-gradient(135deg, #07C160 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.35);
+  margin-bottom: 12px;
+  border: none;
+}
+
+.wx-icon {
+  font-size: 20px;
+  color: #FFFFFF;
+}
+
+.btn-text {
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.cancel-login-btn {
+  font-size: 12px;
+  color: #9CA3AF;
+  padding: 6px;
 }
 
 .drawer-mask {

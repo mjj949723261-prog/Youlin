@@ -1,7 +1,6 @@
 import { reactive } from 'vue'
 import { apiWxLogin, apiUpdateProfile } from '@/utils/api'
 
-// 使用 Vue3 标准 reactive 实现集中式状态 Store，免去依赖兼容困扰
 const state = reactive({
   currentCommunity: {
     id: 'comm_001',
@@ -12,14 +11,15 @@ const state = reactive({
   },
   currentUser: {
     id: 'usr_888',
-    nickname: '张先生',
+    nickname: '微信用户',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     building: '5栋',
     room: '302',
     isOwner: true,
     roleTag: '本小区住户'
   },
-  isLoggedIn: false,
+  isLoggedIn: false, // 初始未登录状态，触发一键授权弹窗
+  showLoginModal: true, // 进入小程序弹窗
   userToken: '',
   myCommunities: [
     {
@@ -40,33 +40,50 @@ const state = reactive({
 })
 
 export const useCommunityStore = () => {
-  const initWxAuth = async () => {
+  // 点击弹窗微信一键登录
+  const performWxLogin = async () => {
     return new Promise((resolve) => {
       // #ifdef MP-WEIXIN
       uni.login({
         provider: 'weixin',
         success: async (res) => {
           if (res.code) {
-            console.log('微信静默登录 code:', res.code)
+            console.log('微信登录获取 code 成功:', res.code)
             const loginRes = await apiWxLogin(res.code)
             if (loginRes) {
               state.userToken = loginRes.token || ''
               state.isLoggedIn = true
+              state.showLoginModal = false
               if (loginRes.userInfo) {
                 Object.assign(state.currentUser, loginRes.userInfo)
               }
+            } else {
+              state.isLoggedIn = true
+              state.showLoginModal = false
             }
+          } else {
+            state.isLoggedIn = true
+            state.showLoginModal = false
           }
           resolve(true)
         },
-        fail: () => resolve(false)
+        fail: () => {
+          state.isLoggedIn = true
+          state.showLoginModal = false
+          resolve(false)
+        }
       })
       // #endif
       // #ifndef MP-WEIXIN
       state.isLoggedIn = true
+      state.showLoginModal = false
       resolve(true)
       // #endif
     })
+  }
+
+  const closeLoginModal = () => {
+    state.showLoginModal = false
   }
 
   const syncWxProfile = async (newNickname, newAvatar) => {
@@ -88,7 +105,8 @@ export const useCommunityStore = () => {
     currentUser: state.currentUser,
     currentCommunity: state.currentCommunity,
     myCommunities: state.myCommunities,
-    initWxAuth,
+    performWxLogin,
+    closeLoginModal,
     syncWxProfile,
     switchCommunity
   }
