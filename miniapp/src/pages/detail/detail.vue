@@ -21,12 +21,12 @@
       <!-- 主发帖卡片 (楼主) -->
       <view class="main-post-card">
         <view class="author-row">
-          <image class="author-avatar" :src="post.avatar" mode="aspectFill" />
+          <image class="author-avatar" :src="post.authorAvatar || defaultAvatar" mode="aspectFill" />
           <view class="author-info">
             <view class="name-line">
               <text class="author-name">{{ post.authorName }}</text>
               <text class="building-badge">{{ post.building }}</text>
-              <text class="role-badge">{{ post.roleTag }}</text>
+              <text class="role-badge">{{ post.roleTag || '本小区住户' }}</text>
             </view>
             <text class="post-time">楼主 · 发布于 {{ post.publishTime }}</text>
           </view>
@@ -38,21 +38,21 @@
         </view>
 
         <!-- 按照微信朋友圈标准规则展示图片 (未点开时) -->
-        <view v-if="post.images && post.images.length > 0" class="moment-media-box">
+        <view v-if="postImages && postImages.length > 0" class="moment-media-box">
           <!-- 朋友圈规则 1：单张图片 (自适应宽高限制) -->
-          <view v-if="post.images.length === 1" class="single-image-wrapper">
+          <view v-if="postImages.length === 1" class="single-image-wrapper">
             <image
               class="moment-single-img"
-              :src="post.images[0]"
+              :src="postImages[0]"
               mode="aspectFill"
               @click="previewPostImages(0)"
             />
           </view>
 
           <!-- 朋友圈规则 2：2张 或 4张图片 (强制左右横向并排正方形 110px * 110px) -->
-          <view v-else-if="post.images.length === 2 || post.images.length === 4" class="moment-grid-2col">
+          <view v-else-if="postImages.length === 2 || postImages.length === 4" class="moment-grid-2col">
             <image
-              v-for="(img, idx) in post.images"
+              v-for="(img, idx) in postImages"
               :key="idx"
               class="moment-square-img-2col"
               :src="img"
@@ -64,7 +64,7 @@
           <!-- 朋友圈规则 3：3张 / 5~9张图片 (三列标准九宫格正方形 84px * 84px) -->
           <view v-else class="moment-grid-3col">
             <image
-              v-for="(img, idx) in post.images"
+              v-for="(img, idx) in postImages"
               :key="idx"
               class="moment-square-img-3col"
               :src="img"
@@ -77,7 +77,7 @@
         <!-- 朋友圈规则 4：未点开时的视频封面与 ▶ 播放大图标 -->
         <view v-if="post.videoUrl" class="moment-video-box">
           <view v-if="!isPlayingVideo" class="video-cover-card" @click="isPlayingVideo = true">
-            <image class="video-cover-img" :src="post.videoPoster || post.images[0] || defaultVideoPoster" mode="aspectFill" />
+            <image class="video-cover-img" :src="post.videoPoster || postImages[0] || defaultVideoPoster" mode="aspectFill" />
             <view class="play-btn-overlay">
               <view class="play-icon-circle">
                 <text class="play-arrow">▶</text>
@@ -91,7 +91,7 @@
         <!-- 底部 Tag 标签 -->
         <view class="post-tag-row">
           <text class="tag-pill" :class="{ urgent: post.tagType === 'URGENT' }">
-            # {{ post.tagName }}
+            # {{ post.tagName || '社区交流' }}
           </text>
         </view>
       </view>
@@ -110,11 +110,11 @@
             class="comment-card"
           >
             <view class="comment-user-row">
-              <image class="comment-avatar" :src="comment.avatar" mode="aspectFill" />
+              <image class="comment-avatar" :src="comment.authorAvatar || defaultAvatar" mode="aspectFill" />
               <view class="comment-user-meta">
                 <view class="comment-name-line">
                   <text class="comment-name">{{ comment.authorName }}</text>
-                  <text class="floor-badge">{{ index + 1 }}楼</text>
+                  <text class="floor-badge">{{ comment.floorNum || (index + 1) }}楼</text>
                 </view>
                 <text class="comment-time">{{ comment.publishTime }}</text>
               </view>
@@ -132,6 +132,7 @@
               <video class="comment-video" :src="comment.video" controls />
             </view>
 
+            <!-- 贴吧嵌套子回复 -->
             <view v-if="comment.subReplies && comment.subReplies.length > 0" class="sub-reply-container">
               <view
                 v-for="sub in comment.subReplies"
@@ -200,73 +201,48 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
+import { apiGetPostDetail, apiGetComments, apiAddComment } from '@/utils/api'
 
 const statusBarHeight = ref(20)
+const postId = ref(null)
 const inputContent = ref('')
 const replyTargetComment = ref(null)
 const replyTargetUser = ref('')
 const commentMedia = ref({ type: null, path: '' })
 const isPlayingVideo = ref(false)
 
+const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
 const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600'
 
-const post = ref({
-  id: 'p1',
-  authorName: '王阿姨',
-  building: '3栋 1202',
-  avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
-  roleTag: '本小区住户',
-  publishTime: '10分钟前',
-  content: '谁家有电钻可以借用半小时？想要在客厅墙上装个挂衣置物架。由于家里只有我和小孙女，急需借用一会儿，用完立即归还，并且必有重谢！麻烦有电钻的邻居联系我呀~',
-  images: [
-    'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600',
-    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600'
-  ],
-  videoUrl: '',
-  videoPoster: '',
-  tagName: '邻里求助',
-  tagType: 'NORMAL'
-})
+const post = ref({})
+const postImages = ref([])
+const commentList = ref([])
 
-const commentList = ref([
-  {
-    id: 'c1',
-    authorName: '张先生',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
-    publishTime: '8分钟前',
-    content: '王阿姨，我家正好有一套冲击钻，放在 5栋 门卫室了，您可以随时去拿取使用~',
-    image: '',
-    video: '',
-    subReplies: [
-      {
-        id: 'sub1',
-        authorName: '王阿姨',
-        replyToUser: '张先生',
-        content: '太感谢张先生了！我这就叫我儿子去门卫室拿，谢谢好邻居！'
-      },
-      {
-        id: 'sub2',
-        authorName: '张先生',
-        replyToUser: '王阿姨',
-        content: '不客气！用的时候注意安全哈~'
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    authorName: '陈女士',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-    publishTime: '5分钟前',
-    content: '我也在 3栋 6楼，如果张先生的借不到，我家里也有把手电钻。',
-    image: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?auto=format&fit=crop&q=80&w=300',
-    video: '',
-    subReplies: []
+// 加载帖子详情及盖楼回复
+const loadPostData = async (id) => {
+  try {
+    const detailData = await apiGetPostDetail(id)
+    if (detailData && detailData.post) {
+      post.value = detailData.post
+      postImages.value = detailData.imageList || []
+    }
+    
+    const commentsData = await apiGetComments(id)
+    if (commentsData) {
+      commentList.value = commentsData
+    }
+  } catch (e) {
+    console.log('读取后端详情或回复失败', e)
   }
-])
+}
 
-const canSend = computed(() => {
-  return inputContent.value.trim().length > 0 || commentMedia.value.path !== ''
+onLoad((options) => {
+  if (options && options.id) {
+    postId.value = options.id
+    loadPostData(options.id)
+  }
 })
 
 onMounted(() => {
@@ -274,6 +250,10 @@ onMounted(() => {
   if (sysInfo.statusBarHeight) {
     statusBarHeight.value = sysInfo.statusBarHeight
   }
+})
+
+const canSend = computed(() => {
+  return inputContent.value.trim().length > 0 || commentMedia.value.path !== ''
 })
 
 const onBack = () => {
@@ -289,7 +269,7 @@ const onBack = () => {
 
 const previewPostImages = (index) => {
   uni.previewImage({
-    urls: post.value.images,
+    urls: postImages.value,
     current: index
   })
 }
@@ -342,38 +322,39 @@ const clearCommentMedia = () => {
   commentMedia.value = { type: null, path: '' }
 }
 
-const onSendComment = () => {
+// 真正写入数据库的跟帖盖楼回复
+const onSendComment = async () => {
   if (!canSend.value) return
 
   const text = inputContent.value.trim()
-  
-  if (replyTargetComment.value) {
-    if (!replyTargetComment.value.subReplies) {
-      replyTargetComment.value.subReplies = []
-    }
-    replyTargetComment.value.subReplies.push({
-      id: 'sub_' + Date.now(),
+  uni.showLoading({ title: '正在回复...' })
+
+  try {
+    await apiAddComment({
+      postId: Number(postId.value),
       authorName: '我 (李先生)',
-      replyToUser: replyTargetUser.value !== replyTargetComment.value.authorName ? replyTargetUser.value : '',
-      content: text
-    })
-  } else {
-    commentList.value.unshift({
-      id: 'c_' + Date.now(),
-      authorName: '我 (李先生)',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
-      publishTime: '刚刚',
+      authorAvatar: defaultAvatar,
       content: text,
       image: commentMedia.value.type === 'IMAGE' ? commentMedia.value.path : '',
       video: commentMedia.value.type === 'VIDEO' ? commentMedia.value.path : '',
-      subReplies: []
+      parentCommentId: replyTargetComment.value ? replyTargetComment.value.id : null,
+      replyToUser: replyTargetUser.value !== (replyTargetComment.value ? replyTargetComment.value.authorName : '') ? replyTargetUser.value : ''
     })
-  }
 
-  inputContent.value = ''
-  clearReplyTarget()
-  clearCommentMedia()
-  uni.showToast({ title: '回复成功！', icon: 'success' })
+    uni.hideLoading()
+    uni.showToast({ title: '回复成功！', icon: 'success' })
+
+    inputContent.value = ''
+    clearReplyTarget()
+    clearCommentMedia()
+    
+    // 重新加载贴吧楼层列表
+    loadPostData(postId.value)
+
+  } catch (e) {
+    uni.hideLoading()
+    console.log('写入回复失败', e)
+  }
 }
 </script>
 
@@ -387,7 +368,6 @@ const onSendComment = () => {
   position: relative;
 }
 
-/* 1. 常驻固定顶部 Header (固定不随列表滑动) */
 .fixed-nav-bar {
   position: fixed;
   top: 0;
@@ -431,7 +411,6 @@ const onSendComment = () => {
   width: 36px;
 }
 
-/* 2. 列表可滚动主体区 */
 .detail-body {
   flex: 1;
   padding: 16px;
@@ -509,7 +488,6 @@ const onSendComment = () => {
   line-height: 1.7;
 }
 
-/* 微信朋友圈媒体显示规范 */
 .moment-media-box {
   margin-bottom: 14px;
 }
@@ -526,7 +504,6 @@ const onSendComment = () => {
   display: block;
 }
 
-/* 规则：两张图/四张图 横向并排双列 (用强加 !important 彻底覆盖微信小程序原生的 image 默认宽度) */
 .moment-grid-2col {
   display: flex !important;
   flex-direction: row !important;
@@ -542,7 +519,6 @@ const onSendComment = () => {
   flex-shrink: 0 !important;
 }
 
-/* 三列九宫格 */
 .moment-grid-3col {
   display: flex !important;
   flex-direction: row !important;

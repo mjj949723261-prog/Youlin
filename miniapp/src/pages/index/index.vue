@@ -18,7 +18,7 @@
         <text class="banner-sub">今天也有温暖的邻里故事</text>
       </view>
 
-      <!-- 公告实时广播小条 (已更新为：新塘街道彩虹社区成立相关通知) -->
+      <!-- 公告实时广播小条 -->
       <view class="banner-notice-strip" @click="onViewNotice">
         <text class="badge-tag">📢 公告</text>
         <text class="notice-text">新塘街道彩虹社区成立相关通知...</text>
@@ -47,11 +47,11 @@
       </view>
     </view>
 
-    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 -->
+    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 (带下拉刷新指示) -->
     <view class="feed-list">
-      <block v-if="filteredPosts.length > 0">
+      <block v-if="posts.length > 0">
         <PostCard
-          v-for="post in filteredPosts"
+          v-for="post in posts"
           :key="post.id"
           :post="post"
           @click="onPostDetail(post.id)"
@@ -59,7 +59,7 @@
       </block>
       <view v-else class="empty-state">
         <text class="empty-icon">🍃</text>
-        <text class="empty-text">该板块下暂无帖子动态~</text>
+        <text class="empty-text">该板块下暂无帖子动态，下拉刷刷新试试吧~</text>
       </view>
     </view>
 
@@ -85,7 +85,7 @@
               :key="cat.value"
               class="chip-item"
               :class="{ active: selectedCategory === cat.value }"
-              @click="selectedCategory = cat.value"
+              @click="onSelectCategory(cat.value)"
             >
               <text class="chip-text">{{ cat.label }}</text>
             </view>
@@ -103,8 +103,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useCommunityStore } from '@/store/community'
+import { apiGetPostList, apiGetCurrentCommunity } from '@/utils/api'
 import PostCard from '@/components/PostCard.vue'
 
 const communityStore = useCommunityStore()
@@ -126,76 +128,39 @@ const categoryOptions = ref([
   { label: '业委会公示', value: 'COMMITTEE' }
 ])
 
-const allPosts = ref([
-  {
-    id: 'p1',
-    authorName: '王阿姨',
-    building: '3栋',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
-    roleTag: '本小区住户',
-    roleType: 'RESIDENT',
-    categoryKey: 'HELP',
-    publishTime: '10分钟前',
-    content: '谁家有电钻可以借用半小时？装个置物架~',
-    singleImg: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=300',
-    tagName: '邻里求助',
-    tagType: 'NORMAL'
-  },
-  {
-    id: 'p2',
-    authorName: '小林',
-    building: '8栋',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
-    roleTag: '本小区住户',
-    roleType: 'RESIDENT',
-    categoryKey: 'HELP',
-    publishTime: '18分钟前',
-    content: '寻找橘猫团团，昨晚在南门附近走失，特征是脖子上有蓝色项圈，有看到的邻居请联系我，必有重谢！希望大家能帮忙留意一下，非常感谢！',
-    singleImg: '',
-    tagName: '紧急求助',
-    tagType: 'URGENT'
-  },
-  {
-    id: 'p3',
-    authorName: '陈阿姨',
-    building: '5栋',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-    roleTag: '5号楼业主',
-    roleType: 'RESIDENT',
-    categoryKey: 'RENT',
-    publishTime: '40分钟前',
-    content: '云彩之城 2期 3号楼精装两居室业主直租，免中介费！首次出租家电齐全，看房方便。',
-    singleImg: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=300',
-    tagName: '房屋出租',
-    tagType: 'RENT'
-  },
-  {
-    id: 'p4',
-    authorName: '张先生',
-    building: '5栋',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
-    roleTag: '本小区住户',
-    roleType: 'RESIDENT',
-    categoryKey: 'SUGGEST',
-    publishTime: '1小时前',
-    content: '今天天气真不错，在楼下看到这只可爱的小猫在晒太阳。',
-    singleImg: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=300',
-    tagName: '生活交流',
-    tagType: 'NORMAL'
+const posts = ref([])
+
+// 加载真实列表数据
+const fetchPostList = async () => {
+  try {
+    const data = await apiGetPostList(selectedCategory.value)
+    if (data) {
+      posts.value = data
+    }
+  } catch (e) {
+    console.log('读取后端动态失败，维持本地视图', e)
+  } finally {
+    uni.stopPullDownRefresh()
   }
-])
+}
 
-const filteredPosts = computed(() => {
-  return allPosts.value.filter(post => {
-    return selectedCategory.value === 'ALL' || post.categoryKey === selectedCategory.value
-  })
-})
-
+// 页面加载 & 刷新
 onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   if (sysInfo.statusBarHeight) {
     statusBarHeight.value = sysInfo.statusBarHeight
   }
+  fetchPostList()
+})
+
+// 每次显示页面重载 (发帖返回后自动刷新数据)
+onShow(() => {
+  fetchPostList()
+})
+
+// 原生下拉刷新监听
+onPullDownRefresh(() => {
+  fetchPostList()
 })
 
 const openFilterDrawer = () => {
@@ -206,12 +171,18 @@ const closeFilterDrawer = () => {
   showDrawer.value = false
 }
 
+const onSelectCategory = (val) => {
+  selectedCategory.value = val
+}
+
 const onResetFilter = () => {
   selectedCategory.value = 'ALL'
+  fetchPostList()
 }
 
 const onApplyFilter = () => {
   showDrawer.value = false
+  fetchPostList()
   uni.showToast({ title: '筛选已应用', icon: 'none' })
 }
 
@@ -228,7 +199,6 @@ const onSwitchCommunity = () => {
   })
 }
 
-// 查看新塘街道彩虹社区通知
 const onViewNotice = () => {
   uni.showModal({
     title: '📢 新塘街道彩虹社区成立相关通知',

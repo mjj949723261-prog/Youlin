@@ -1,145 +1,142 @@
 <template>
   <view class="publish-container">
-    <!-- 1. 自定义顶部导航栏 (左上角返回按钮) -->
-    <view class="nav-bar">
-      <view class="back-btn-box" @click="onBack">
+    <!-- 1. 顶部 Navigation Bar -->
+    <view class="publish-nav-bar">
+      <view class="back-btn-box" @click="safeNavigateBack">
         <text class="back-icon">‹</text>
       </view>
-      <text class="page-title">发布动态</text>
+      <text class="nav-title">发布动态</text>
       <view class="nav-placeholder"></view>
     </view>
 
+    <!-- 主体表单内容区 -->
     <scroll-view scroll-y class="publish-body">
       
-      <!-- 2. 高颜值“板块选择与回显栏” -->
-      <view class="section-box category-select-bar" @click="openCategoryPopup">
-        <view class="bar-left">
-          <text class="bar-icon">📌</text>
-          <text class="bar-label">发布板块</text>
-          <text class="required">*</text>
+      <!-- 2. 板块类别选择条目 (弹窗 Drawer) -->
+      <view class="selector-card" @click="openCategoryPopup">
+        <view class="selector-left">
+          <text class="selector-label">发布板块</text>
+          <text class="selected-value">{{ selectedCategoryLabel }}</text>
         </view>
-        <view class="bar-right">
-          <text v-if="selectedCategoryObj" class="selected-val">
-            {{ selectedCategoryObj.icon }} {{ selectedCategoryObj.label }}
-          </text>
-          <text v-else class="placeholder-val">请选择板块</text>
-          <text class="arrow">›</text>
-        </view>
+        <text class="arrow-right">›</text>
       </view>
 
       <!-- 3. 文字内容输入区 -->
-      <view class="section-box">
+      <view class="input-card">
         <textarea
-          v-model="content"
-          class="content-input"
-          placeholder="分享你身边的邻里故事、求助事项、闲置物品或吐槽建议..."
+          v-model="contentText"
+          class="content-textarea"
+          placeholder="邻居，分享你发现的新鲜事，或者需要什么帮忙..."
+          placeholder-style="color: #9CA3AF;"
           maxlength="500"
-        />
-        <text class="char-count">{{ content.length }}/500</text>
+        ></textarea>
+        <view class="word-count">
+          <text>{{ contentText.length }}/500</text>
+        </view>
       </view>
 
-      <!-- 4. 媒体选择区 (图片 9 张 / 视频 1 个，严格互斥) -->
-      <view class="section-box">
-        <view class="media-title-row">
-          <text class="section-title">添加图片/视频</text>
-          <text v-if="mediaType === 'IMAGE'" class="media-hint">已选图片 {{ images.length }}/9 张</text>
-          <text v-else-if="mediaType === 'VIDEO'" class="media-hint">已选视频 1/1 个</text>
-          <text v-else class="media-hint">图片或视频二选一</text>
+      <!-- 4. 媒体选择区 (9图或1视频互斥限制) -->
+      <view class="media-card">
+        <view class="media-header">
+          <text class="media-title">添加图片/视频</text>
+          <text class="media-tip">{{ mediaTipText }}</text>
         </view>
 
-        <!-- 已选图片九宫格 -->
-        <view v-if="mediaType === 'IMAGE' || mediaType === 'NONE'" class="media-grid">
-          <view v-for="(img, index) in images" :key="index" class="media-item">
-            <image class="preview-img" :src="img" mode="aspectFill" @click="previewImage(index)" />
-            <view class="delete-badge" @click.stop="removeImage(index)">✕</view>
+        <view class="media-grid">
+          <!-- 已添加的媒体预览列表 -->
+          <view
+            v-for="(item, index) in mediaList"
+            :key="index"
+            class="media-item-box"
+          >
+            <!-- 图片预览 -->
+            <image
+              v-if="item.type === 'IMAGE'"
+              class="media-preview"
+              :src="item.path"
+              mode="aspectFill"
+              @click="previewImage(index)"
+            />
+            <!-- 视频预览 -->
+            <video
+              v-else-if="item.type === 'VIDEO'"
+              class="media-preview"
+              :src="item.path"
+              controls
+            />
+            <!-- 删除小按钮 -->
+            <text class="delete-badge" @click="removeMedia(index)">✕</text>
           </view>
 
-          <!-- 添加图片按钮 -->
+          <!-- 90px 正方形高颜值图片上传入口 -->
           <view
-            v-if="images.length < 9 && mediaType !== 'VIDEO'"
-            class="upload-btn"
-            @click="chooseImages"
+            v-if="canAddImage"
+            class="upload-btn-box"
+            @click="onChooseImages"
           >
             <text class="upload-icon">📷</text>
-            <text class="upload-label">图片({{ images.length }}/9)</text>
+            <text class="upload-text">图片 ({{ imageCount }}/9)</text>
           </view>
-        </view>
 
-        <!-- 已选视频预览区域 -->
-        <view v-if="mediaType === 'VIDEO'" class="video-preview-box">
-          <video class="preview-video" :src="videoUrl" controls />
-          <view class="delete-video-btn" @click="removeVideo">删除视频重新选择</view>
-        </view>
-
-        <!-- 添加视频按钮 -->
-        <view
-          v-if="mediaType === 'NONE'"
-          class="upload-video-entry"
-          @click="chooseVideo"
-        >
-          <text class="upload-icon">🎥</text>
-          <text class="upload-label">添加视频 (最多1个，与图片互斥)</text>
+          <!-- 90px 正方形高颜值视频上传入口 -->
+          <view
+            v-if="canAddVideo"
+            class="upload-btn-box video-box"
+            @click="onChooseVideo"
+          >
+            <text class="upload-icon">🎥</text>
+            <text class="upload-text">短视频 ({{ videoCount }}/1)</text>
+          </view>
         </view>
       </view>
 
-      <!-- 5. 邻里友善发帖公约温馨提示 -->
+      <!-- 5. 悦邻里友好发帖公约 Card -->
       <view class="convention-card">
-        <view class="convention-title">
-          <text class="heart-icon">💚</text>
-          <text class="title-text">悦邻里 · 友好发帖公约</text>
+        <view class="convention-header">
+          <text class="shield-icon">🛡️</text>
+          <text class="convention-title">悦邻里 · 友好发帖公约</text>
         </view>
         <text class="convention-desc">
-          请文明理性沟通，严禁发布虚假信息、广告垃圾、侵权或人身攻击内容，让我们共同营造温暖、真实、互助的小区氛围。
+          本板块为云彩之城邻里真实交流空间。请遵守国家法律法规，拒绝广告营销骚扰、虚假信息及人身攻击，共同维护文明温馨的社区环境。
         </text>
       </view>
 
-      <view class="bottom-padding"></view>
+      <view class="bottom-spacer"></view>
     </scroll-view>
 
-    <!-- 6. 最下方固定大粒度发布按钮 -->
-    <view class="fixed-footer">
+    <!-- 6. 底部固定发布提交按钮 -->
+    <view class="bottom-fixed-bar">
       <button
-        class="bottom-submit-btn"
-        :disabled="!canSubmit"
-        :class="{ active: canSubmit }"
+        class="submit-btn"
+        :disabled="!canSubmit || isSubmitting"
+        :class="{ active: canSubmit && !isSubmitting }"
         @click="onSubmit"
       >
-        确认发布
+        <text v-if="isSubmitting">正在发布...</text>
+        <text v-else>确认发布动态</text>
       </button>
     </view>
 
-    <!-- 7. 符合 UI 视觉的半屏平滑板块选择弹窗 -->
-    <view class="popup-mask" :class="{ show: showPopup }" @click="closeCategoryPopup"></view>
-    <view class="popup-panel" :class="{ show: showPopup }">
+    <!-- 7. 板块选择 Drawer 弹窗 -->
+    <view class="popup-mask" :class="{ show: showCategoryPopup }" @click="closeCategoryPopup"></view>
+    <view class="popup-panel" :class="{ show: showCategoryPopup }">
       <view class="popup-header">
         <text class="popup-title">选择发布板块</text>
-        <view class="close-btn-box" @click="closeCategoryPopup">
-          <text class="close-icon">✕</text>
-        </view>
+        <text class="popup-close" @click="closeCategoryPopup">✕</text>
       </view>
 
-      <scroll-view scroll-y class="popup-scroll-body">
-        <view class="popup-options-list">
-          <view
-            v-for="cat in categories"
-            :key="cat.value"
-            class="cat-option-card"
-            :class="{ active: selectedCategory === cat.value }"
-            @click="selectCategory(cat)"
-          >
-            <view class="option-left">
-              <text class="cat-icon">{{ cat.icon }}</text>
-              <view class="cat-info">
-                <text class="cat-name">{{ cat.label }}</text>
-                <text class="cat-desc">{{ cat.desc }}</text>
-              </view>
-            </view>
-            <view v-if="selectedCategory === cat.value" class="check-circle">
-              <text class="check-mark">✓</text>
-            </view>
-          </view>
+      <view class="popup-body">
+        <view
+          v-for="cat in categoryList"
+          :key="cat.key"
+          class="category-option-item"
+          :class="{ active: selectedCategoryKey === cat.key }"
+          @click="selectCategory(cat)"
+        >
+          <text class="cat-label">{{ cat.label }}</text>
+          <text v-if="selectedCategoryKey === cat.key" class="check-icon">✓</text>
         </view>
-      </scroll-view>
+      </view>
     </view>
 
   </view>
@@ -147,88 +144,45 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useCommunityStore } from '@/store/community'
+import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
+import { apiCreatePost } from '@/utils/api'
 
-const content = ref('')
-const selectedCategory = ref('HELP')
-const showPopup = ref(false)
-const mediaType = ref('NONE')
-const images = ref([])
-const videoUrl = ref('')
+const communityStore = useCommunityStore()
 
-const categories = [
-  { icon: '🤝', label: '邻里求助', value: 'HELP', desc: '借用工具、急用药品、代遛狗喂猫等' },
-  { icon: '♻️', label: '闲置面交', value: 'IDLE', desc: '同小区物品面交转让、免费赠送' },
-  { icon: '🏠', label: '房屋出租', value: 'RENT', desc: '小区房源直租、找合租室友（免中介费）' },
-  { icon: '⚽', label: '社区活动', value: 'EVENT', desc: '约跑打球、亲子活动、户外组团' },
-  { icon: '💬', label: '吐槽建议', value: 'SUGGEST', desc: '小区公区吐槽、给物业/业委会意见' }
-]
+const contentText = ref('')
+const mediaList = ref([]) // { type: 'IMAGE'|'VIDEO', path: string }
+const isSubmitting = ref(false)
 
-const selectedCategoryObj = computed(() => {
-  return categories.find(c => c.value === selectedCategory.value)
+const showCategoryPopup = ref(false)
+const selectedCategoryKey = ref('HELP')
+const selectedCategoryLabel = ref('邻里求助')
+
+const categoryList = ref([
+  { key: 'HELP', label: '邻里求助' },
+  { key: 'IDLE', label: '闲置面交' },
+  { key: 'RENT', label: '房屋出租' },
+  { key: 'EVENT', label: '社区活动' },
+  { key: 'SUGGEST', label: '吐槽建议' },
+  { key: 'COMMITTEE', label: '业委会公示' }
+])
+
+const imageCount = computed(() => mediaList.value.filter(m => m.type === 'IMAGE').length)
+const videoCount = computed(() => mediaList.value.filter(m => m.type === 'VIDEO').length)
+
+const canAddImage = computed(() => videoCount.value === 0 && imageCount.value < 9)
+const canAddVideo = computed(() => imageCount.value === 0 && videoCount.value === 0)
+
+const mediaTipText = computed(() => {
+  if (videoCount.value > 0) return '已添加视频 (不可混选图片)'
+  if (imageCount.value > 0) return `已选 ${imageCount.value}/9 张图片 (不可混选视频)`
+  return '支持选择 9 张图片或 1 个视频'
 })
 
 const canSubmit = computed(() => {
-  return content.value.trim().length > 0 && selectedCategory.value !== ''
+  return contentText.value.trim().length > 0 || mediaList.value.length > 0
 })
 
-const openCategoryPopup = () => {
-  showPopup.value = true
-}
-
-const closeCategoryPopup = () => {
-  showPopup.value = false
-}
-
-const selectCategory = (cat) => {
-  selectedCategory.value = cat.value
-  showPopup.value = false
-}
-
-const chooseImages = () => {
-  const maxCount = 9 - images.value.length
-  uni.chooseImage({
-    count: maxCount,
-    sizeType: ['compressed'],
-    sourceType: ['album', 'camera'],
-    success: (res) => {
-      images.value = [...images.value, ...res.tempFilePaths]
-      mediaType.value = 'IMAGE'
-    }
-  })
-}
-
-const removeImage = (index) => {
-  images.value.splice(index, 1)
-  if (images.value.length === 0) {
-    mediaType.value = 'NONE'
-  }
-}
-
-const previewImage = (index) => {
-  uni.previewImage({
-    urls: images.value,
-    current: index
-  })
-}
-
-const chooseVideo = () => {
-  uni.chooseVideo({
-    sourceType: ['album', 'camera'],
-    maxDuration: 60,
-    camera: 'back',
-    success: (res) => {
-      videoUrl.value = res.tempFilePath
-      mediaType.value = 'VIDEO'
-    }
-  })
-}
-
-const removeVideo = () => {
-  videoUrl.value = ''
-  mediaType.value = 'NONE'
-}
-
-// 🛡️ 安全返回处理 (自动防御 navigateBack:fail cannot navigate back at first page 报错)
 const safeNavigateBack = () => {
   const pages = getCurrentPages()
   if (pages && pages.length > 1) {
@@ -240,33 +194,91 @@ const safeNavigateBack = () => {
   }
 }
 
-const onBack = () => {
-  if (content.value.length > 0 || images.value.length > 0 || videoUrl.value !== '') {
-    uni.showModal({
-      title: '提示',
-      content: '退出后编辑的内容将不保留，是否确认离开？',
-      success: (res) => {
-        if (res.confirm) {
-          safeNavigateBack()
-        }
-      }
-    })
-  } else {
-    safeNavigateBack()
+const openCategoryPopup = () => { showCategoryPopup.value = true }
+const closeCategoryPopup = () => { showCategoryPopup.value = false }
+
+const selectCategory = (cat) => {
+  selectedCategoryKey.value = cat.key
+  selectedCategoryLabel.value = cat.label
+  showCategoryPopup.value = false
+}
+
+const onChooseImages = async () => {
+  try {
+    const remainCount = 9 - imageCount.value
+    const paths = await chooseAndCompressImages({ count: remainCount, maxMB: 3.5 })
+    if (paths && paths.length > 0) {
+      paths.forEach(p => {
+        mediaList.value.push({ type: 'IMAGE', path: p })
+      })
+    }
+  } catch (e) {
+    console.log('取消图片选择')
   }
 }
 
-const onSubmit = () => {
-  if (!canSubmit.value) return
+const onChooseVideo = async () => {
+  try {
+    const path = await chooseAndCompressVideo({ isReply: false, maxMB: 20 })
+    if (path) {
+      mediaList.value.push({ type: 'VIDEO', path })
+    }
+  } catch (e) {
+    console.log('取消视频选择')
+  }
+}
 
-  uni.showLoading({ title: '正在发布...' })
-  setTimeout(() => {
+const removeMedia = (index) => {
+  mediaList.value.splice(index, 1)
+}
+
+const previewImage = (index) => {
+  const imagePaths = mediaList.value.filter(m => m.type === 'IMAGE').map(m => m.path)
+  uni.previewImage({
+    urls: imagePaths,
+    current: index
+  })
+}
+
+// 真正写入 Spring Boot 后端服务数据库
+const onSubmit = async () => {
+  if (!canSubmit.value || isSubmitting.value) return
+
+  isSubmitting.value = true
+  uni.showLoading({ title: '正在发布中...' })
+
+  try {
+    const videoItem = mediaList.value.find(m => m.type === 'VIDEO')
+    const imagePaths = mediaList.value.filter(m => m.type === 'IMAGE').map(m => m.path)
+
+    await apiCreatePost({
+      authorName: communityStore.currentUser.nickname || '李先生',
+      authorAvatar: communityStore.currentUser.avatar,
+      building: (communityStore.currentUser.building || '5栋') + ' ' + (communityStore.currentUser.room || '302'),
+      roleTag: communityStore.currentUser.roleTag || '本小区住户',
+      roleType: 'RESIDENT',
+      categoryKey: selectedCategoryKey.value,
+      tagName: selectedCategoryLabel.value,
+      tagType: selectedCategoryKey.value === 'HELP' ? 'URGENT' : 'NORMAL',
+      content: contentText.value.trim(),
+      images: imagePaths.join(','),
+      videoUrl: videoItem ? videoItem.path : '',
+      videoPoster: videoItem ? (videoItem.thumb || '') : '',
+      communityId: communityStore.currentCommunity.id || 'comm_001'
+    })
+
     uni.hideLoading()
-    uni.showToast({ title: '发布成功！', icon: 'success' })
+    uni.showToast({ title: '动态发布成功！', icon: 'success' })
+
     setTimeout(() => {
       safeNavigateBack()
-    }, 1200)
-  }, 800)
+    }, 1000)
+
+  } catch (e) {
+    uni.hideLoading()
+    isSubmitting.value = false
+    console.log('发帖写入数据库失败', e)
+  }
 }
 </script>
 
@@ -277,11 +289,9 @@ const onSubmit = () => {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  position: relative;
 }
 
-/* 1. 顶部导航栏 */
-.nav-bar {
+.publish-nav-bar {
   padding: 44px 16px 12px 16px;
   background-color: #FFFFFF;
   display: flex;
@@ -305,7 +315,7 @@ const onSubmit = () => {
   margin-top: -2px;
 }
 
-.page-title {
+.nav-title {
   font-size: 17px;
   font-weight: 800;
   color: #111827;
@@ -315,109 +325,95 @@ const onSubmit = () => {
   width: 36px;
 }
 
-/* 2. 主体可滚动区 */
 .publish-body {
   flex: 1;
   padding: 16px;
   box-sizing: border-box;
 }
 
-.section-box {
+.selector-card {
   background: #FFFFFF;
   border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.03);
-  box-sizing: border-box;
-}
-
-.category-select-bar {
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  border: 1px solid #F3F4F6;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.03);
 }
 
-.bar-left {
+.selector-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.bar-icon {
-  font-size: 16px;
-}
-
-.bar-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.required {
-  color: #EF4444;
-  font-size: 14px;
-}
-
-.bar-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.selected-val {
-  font-size: 13px;
-  font-weight: 700;
-  color: #059669;
-  background: #ECFDF5;
-  border: 1px solid #A7F3D0;
-  padding: 4px 12px;
-  border-radius: 16px;
-}
-
-.placeholder-val {
-  font-size: 14px;
-  color: #9CA3AF;
-}
-
-.arrow {
-  font-size: 18px;
-  color: #9CA3AF;
-}
-
-.content-input {
-  width: 100%;
-  height: 120px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #111827;
-  box-sizing: border-box;
-}
-
-.char-count {
-  font-size: 11px;
-  color: #9CA3AF;
-  text-align: right;
-  display: block;
-  margin-top: 4px;
-}
-
-.section-title {
+.selector-label {
   font-size: 14px;
   font-weight: 700;
   color: #374151;
 }
 
-.media-title-row {
+.selected-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #059669;
+  background: #ECFDF5;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.arrow-right {
+  font-size: 18px;
+  color: #9CA3AF;
+}
+
+.input-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.03);
+  position: relative;
+}
+
+.content-textarea {
+  width: 100%;
+  height: 140px;
+  font-size: 15px;
+  color: #111827;
+  line-height: 1.6;
+}
+
+.word-count {
+  text-align: right;
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.media-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.03);
+}
+
+.media-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.media-hint {
-  font-size: 12px;
+.media-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.media-tip {
+  font-size: 11px;
   color: #9CA3AF;
 }
 
@@ -427,14 +423,15 @@ const onSubmit = () => {
   gap: 10px;
 }
 
-.media-item {
+.media-item-box {
   position: relative;
   width: 90px;
   height: 90px;
-  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.preview-img {
+.media-preview {
   width: 100%;
   height: 100%;
   border-radius: 12px;
@@ -442,97 +439,62 @@ const onSubmit = () => {
 
 .delete-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 22px;
-  height: 22px;
-  background: #EF4444;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.6);
   color: #FFFFFF;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  z-index: 10;
+  font-size: 11px;
+  text-align: center;
+  line-height: 20px;
 }
 
-.upload-btn {
+.upload-btn-box {
   width: 90px;
   height: 90px;
   border-radius: 12px;
-  border: 2px dashed #D1D5DB;
   background: #F9FAFB;
+  border: 1px dashed #D1D5DB;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .upload-icon {
   font-size: 24px;
 }
 
-.upload-label {
-  font-size: 11px;
+.upload-text {
+  font-size: 10px;
   color: #6B7280;
 }
 
-.upload-video-entry {
-  margin-top: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 2px dashed #D1D5DB;
-  background: #F9FAFB;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.video-preview-box {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.preview-video {
-  width: 100%;
-  height: 180px;
-  border-radius: 12px;
-}
-
-.delete-video-btn {
-  font-size: 12px;
-  color: #EF4444;
-  text-align: center;
-  padding: 6px;
-}
-
 .convention-card {
-  background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%);
-  border-radius: 16px;
-  padding: 14px 16px;
-  margin-bottom: 20px;
+  background: #ECFDF5;
   border: 1px solid #A7F3D0;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
 
-.convention-title {
+.convention-header {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
 }
 
-.heart-icon {
+.shield-icon {
   font-size: 14px;
 }
 
-.title-text {
+.convention-title {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   color: #065F46;
 }
 
@@ -540,38 +502,35 @@ const onSubmit = () => {
   font-size: 12px;
   color: #047857;
   line-height: 1.5;
-  display: block;
 }
 
-.bottom-padding {
-  height: 90px;
+.bottom-spacer {
+  height: 80px;
 }
 
-.fixed-footer {
+.bottom-fixed-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   background: #FFFFFF;
-  padding: 12px 20px 30px 20px;
+  padding: 12px 16px 28px 16px;
   border-top: 1px solid #F1F5F9;
   z-index: 100;
 }
 
-.bottom-submit-btn {
-  width: 100%;
-  height: 46px;
-  line-height: 46px;
-  font-size: 16px;
+.submit-btn {
+  height: 44px;
+  line-height: 44px;
+  border-radius: 22px;
+  font-size: 15px;
   font-weight: 700;
   color: #9CA3AF;
   background: #E5E7EB;
-  border-radius: 24px;
   border: none;
-  text-align: center;
 }
 
-.bottom-submit-btn.active {
+.submit-btn.active {
   color: #FFFFFF;
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
@@ -583,8 +542,8 @@ const onSubmit = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
   z-index: 999;
   opacity: 0;
   pointer-events: none;
@@ -598,19 +557,15 @@ const onSubmit = () => {
 
 .popup-panel {
   position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
   background: #FFFFFF;
   border-radius: 24px 24px 0 0;
   z-index: 1000;
   transform: translateY(100%);
-  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-  display: flex;
-  flex-direction: column;
-  max-height: 70vh;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  padding-bottom: 28px;
 }
 
 .popup-panel.show {
@@ -618,7 +573,7 @@ const onSubmit = () => {
 }
 
 .popup-header {
-  padding: 20px 20px 14px 20px;
+  padding: 18px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -631,91 +586,37 @@ const onSubmit = () => {
   color: #111827;
 }
 
-.close-btn-box {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-icon {
-  font-size: 16px;
+.popup-close {
+  font-size: 18px;
   color: #9CA3AF;
 }
 
-.popup-scroll-body {
-  height: 340px;
-  padding: 12px 16px;
-  box-sizing: border-box;
+.popup-body {
+  padding: 10px 20px;
 }
 
-.popup-options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cat-option-card {
-  padding: 14px 16px;
-  border-radius: 16px;
+.category-option-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #F9FAFB;
-  border: 1px solid #F3F4F6;
-  transition: all 0.2s ease;
+  padding: 14px 0;
+  border-bottom: 1px solid #F9FAFB;
 }
 
-.cat-option-card.active {
-  background: #ECFDF5;
-  border: 1px solid #10B981;
-}
-
-.option-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.cat-icon {
-  font-size: 24px;
-}
-
-.cat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cat-name {
+.cat-label {
   font-size: 15px;
-  font-weight: 700;
-  color: #111827;
+  color: #374151;
+  font-weight: 500;
 }
 
-.cat-option-card.active .cat-name {
+.category-option-item.active .cat-label {
   color: #059669;
-}
-
-.cat-desc {
-  font-size: 12px;
-  color: #6B7280;
-}
-
-.check-circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #10B981;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.check-mark {
-  font-size: 14px;
   font-weight: 800;
-  color: #FFFFFF;
+}
+
+.check-icon {
+  font-size: 16px;
+  color: #059669;
+  font-weight: 800;
 }
 </style>
