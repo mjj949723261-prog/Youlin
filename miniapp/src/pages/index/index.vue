@@ -4,9 +4,9 @@
     <view class="custom-header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="header-content">
         <image class="user-avatar" :src="communityStore.currentUser.avatar" mode="aspectFill" />
-        <view class="community-selector" @click="onSwitchCommunity">
-          <text class="location-icon">📍</text>
-          <text class="community-name">{{ communityStore.currentCommunity.name }}</text>
+        <view class="community-selector">
+          <text class="location-icon">🏡</text>
+          <text class="community-name">这儿有邻</text>
         </view>
       </view>
     </view>
@@ -14,14 +14,14 @@
     <!-- 2. 温暖风格公告/问候 Banner 卡片 -->
     <view class="banner-card">
       <view class="banner-text-box">
-        <text class="banner-title">早上好，{{ communityStore.currentCommunity.name }}</text>
+        <text class="banner-title">欢迎使用 这儿有邻</text>
         <text class="banner-sub">今天也有温暖的邻里故事</text>
       </view>
 
-      <!-- 公告实时广播小条 -->
+      <!-- 公告广播小条 -->
       <view class="banner-notice-strip" @click="onViewNotice">
         <text class="badge-tag">📢 公告</text>
-        <text class="notice-text">新塘街道彩虹社区成立相关通知...</text>
+        <text class="notice-text">社区纯粹交流平台服务公约与使用须知...</text>
         <text class="arrow">›</text>
       </view>
     </view>
@@ -47,11 +47,11 @@
       </view>
     </view>
 
-    <!-- 4. 放置在“推荐 邻里圈”Tab 栏正下方的专属列表刷新指示条 (动态显示最新刷新时间) -->
+    <!-- 4. 放置在 Tab 栏正下方的列表刷新指示条 (动态显示最新刷新时间) -->
     <view class="tab-bottom-refresh-bar" @click="manualRefresh">
       <view class="refresh-left">
         <text class="refresh-dot"></text>
-        <text class="refresh-title">最新帖子列表</text>
+        <text class="refresh-title">最新动态列表</text>
       </view>
 
       <view class="refresh-right">
@@ -72,30 +72,29 @@
       </block>
       <view v-else class="empty-state">
         <text class="empty-icon">🍃</text>
-        <text class="empty-text">该板块下暂无帖子动态，点击上方 ↺ 刷新试试吧~</text>
+        <text class="empty-text">暂无动态，点击上方 ↺ 刷新试试吧~</text>
       </view>
     </view>
 
-    <!-- 6. 右下角高颜值悬浮发帖加号大按钮 (FAB) -->
+    <!-- 6. 右下角悬浮发帖大按钮 (FAB) -->
     <view class="fab-post-btn" @click="onPublishClick">
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 7. 微信一键授权登录 Modal 弹窗 -->
+    <!-- 7. 强制微信授权登录 Modal 遮罩层 (必须登录才可以使用) -->
     <view class="wx-login-mask" :class="{ show: communityStore.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
           <text class="app-icon">🏡</text>
-          <text class="app-title">欢迎进入【云彩之城】社区圈</text>
+          <text class="app-title">欢迎使用 这儿有邻</text>
         </view>
-        <text class="login-sub">新塘街道彩虹社区 · 邻里纯粹互助平台</text>
-        <text class="login-desc">为保障本小区邻里真实交流与业主隐私安全，进入小程序请先完成微信授权登录。</text>
+        <text class="login-sub">邻里纯粹交流与互助平台</text>
+        <text class="login-desc">为保障社区真实交流与用户隐私安全，使用小程序必须先完成微信授权登录。</text>
 
         <button class="wx-login-btn" @click="handleWxLogin">
           <text class="wx-icon">💬</text>
           <text class="btn-text">微信一键快捷登录</text>
         </button>
-        <text class="cancel-login-btn" @click="handleGuestLook">暂不登录，先浏览公告</text>
       </view>
     </view>
 
@@ -211,17 +210,12 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 点击微信一键授权登录
+// 必须微信登录
 const handleWxLogin = async () => {
-  uni.showLoading({ title: '正在安全授权...' })
+  uni.showLoading({ title: '正在安全登录...' })
   await communityStore.performWxLogin()
   uni.hideLoading()
   uni.showToast({ title: '微信登录成功！', icon: 'success' })
-}
-
-// 暂不登录
-const handleGuestLook = () => {
-  communityStore.closeLoginModal()
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -246,18 +240,13 @@ const onTabSelect = (index) => {
 }
 
 const onSwitchCommunity = () => {
-  uni.showActionSheet({
-    itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.building + ')'),
-    success: (res) => {
-      communityStore.switchCommunity(communityStore.myCommunities[res.tapIndex])
-    }
-  })
+  uni.showToast({ title: '欢迎使用这儿有邻', icon: 'none' })
 }
 
 const onViewNotice = () => {
   uni.showModal({
-    title: '📢 新塘街道彩虹社区成立相关通知',
-    content: '热烈祝贺新塘街道彩虹社区正式成立！为更好地服务广大居民与云彩之城业主，彩虹社区将进一步优化公共服务与邻里交流平台。',
+    title: '📢 社区纯粹交流平台使用须知',
+    content: '欢迎使用【这儿有邻】！为更好地服务广大用户，请遵守法律法规与邻里公约，共建温馨和谐交流空间。',
     showCancel: false
   })
 }
@@ -538,16 +527,16 @@ const onPostDetail = (id) => {
   margin-top: -2px;
 }
 
-/* 微信一键授权登录高颜值弹窗 */
+/* 强约束全屏微信授权登录遮罩 (必须登录才可以使用) */
 .wx-login-mask {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -566,35 +555,35 @@ const onPostDetail = (id) => {
   width: 100%;
   background: #FFFFFF;
   border-radius: 24px;
-  padding: 24px 20px;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
 }
 
 .login-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .app-icon {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .app-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: #111827;
 }
 
 .login-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: #059669;
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-weight: 700;
+  margin-bottom: 14px;
 }
 
 .login-desc {
@@ -602,23 +591,22 @@ const onPostDetail = (id) => {
   color: #4B5563;
   line-height: 1.6;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   background: #F9FAFB;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 14px;
 }
 
 .wx-login-btn {
   width: 100%;
-  height: 46px;
-  border-radius: 23px;
+  height: 48px;
+  border-radius: 24px;
   background: linear-gradient(135deg, #07C160 0%, #059669 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.35);
-  margin-bottom: 12px;
+  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.4);
   border: none;
 }
 
@@ -628,15 +616,9 @@ const onPostDetail = (id) => {
 }
 
 .btn-text {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: #FFFFFF;
-}
-
-.cancel-login-btn {
-  font-size: 12px;
-  color: #9CA3AF;
-  padding: 6px;
 }
 
 .drawer-mask {

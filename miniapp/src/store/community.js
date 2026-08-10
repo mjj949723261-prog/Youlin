@@ -4,10 +4,10 @@ import { apiWxLogin, apiUpdateProfile } from '@/utils/api'
 const state = reactive({
   currentCommunity: {
     id: 'comm_001',
-    name: '云彩之城',
+    name: '我的社区',
     subDistrictId: 'sub_101',
-    subDistrictName: '新塘街道彩虹社区',
-    building: '云彩之城 1期'
+    subDistrictName: '社区服务中心',
+    building: '1期'
   },
   currentUser: {
     id: 'usr_888',
@@ -18,29 +18,22 @@ const state = reactive({
     isOwner: true,
     roleTag: '本小区住户'
   },
-  isLoggedIn: false, // 初始未登录状态，触发一键授权弹窗
-  showLoginModal: true, // 进入小程序弹窗
+  isLoggedIn: false, // 强制未登录状态
+  showLoginModal: true, // 强制弹出全屏微信登录遮罩，必须登录才可以使用
   userToken: '',
   myCommunities: [
     {
       id: 'comm_001',
-      name: '云彩之城 1期',
+      name: '我的社区 1期',
       subDistrictId: 'sub_101',
-      subDistrictName: '新塘街道彩虹社区',
-      building: '5栋 302室 (自住)'
-    },
-    {
-      id: 'comm_002',
-      name: '云彩之城 2期',
-      subDistrictId: 'sub_101',
-      subDistrictName: '新塘街道彩虹社区',
-      building: '8栋 1104室 (出租)'
+      subDistrictName: '社区服务中心',
+      building: '5栋 302室'
     }
   ]
 })
 
 export const useCommunityStore = () => {
-  // 点击弹窗微信一键登录
+  // 必须登录才可以使用
   const performWxLogin = async () => {
     return new Promise((resolve) => {
       // #ifdef MP-WEIXIN
@@ -82,10 +75,6 @@ export const useCommunityStore = () => {
     })
   }
 
-  const closeLoginModal = () => {
-    state.showLoginModal = false
-  }
-
   const syncWxProfile = async (newNickname, newAvatar) => {
     if (newNickname) state.currentUser.nickname = newNickname
     if (newAvatar) state.currentUser.avatar = newAvatar
@@ -106,7 +95,6 @@ export const useCommunityStore = () => {
     currentCommunity: state.currentCommunity,
     myCommunities: state.myCommunities,
     performWxLogin,
-    closeLoginModal,
     syncWxProfile,
     switchCommunity
   }
