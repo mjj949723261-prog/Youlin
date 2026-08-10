@@ -36,7 +36,8 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-# 微信小程序 AppID 配置
+# 微信小程序配置
 wx:
   miniapp:
     appid: wxc3781b268c2b5fb8
+    secret: 17c35f7527d0b9a27fa341abce811a16
