@@ -8,6 +8,11 @@
           <text class="location-icon">📍</text>
           <text class="community-name">{{ communityStore.currentCommunity.name }}</text>
         </view>
+
+        <!-- 右侧手动刷新图标按钮 -->
+        <view class="header-refresh-btn" @click="manualRefresh">
+          <text class="refresh-icon" :class="{ spinning: isRefreshing }">↺</text>
+        </view>
       </view>
     </view>
 
@@ -47,8 +52,14 @@
       </view>
     </view>
 
-    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 (带下拉刷新指示) -->
+    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 -->
     <view class="feed-list">
+      <!-- 下拉刷新状态小提示条 -->
+      <view v-if="isRefreshing" class="refresh-indicator">
+        <text class="indicator-icon spinning">⌛</text>
+        <text class="indicator-text">正在获取【云彩之城】最新动态...</text>
+      </view>
+
       <block v-if="posts.length > 0">
         <PostCard
           v-for="post in posts"
@@ -59,7 +70,7 @@
       </block>
       <view v-else class="empty-state">
         <text class="empty-icon">🍃</text>
-        <text class="empty-text">该板块下暂无帖子动态，下拉刷刷新试试吧~</text>
+        <text class="empty-text">该板块下暂无帖子动态，下拉刷新试试吧~</text>
       </view>
     </view>
 
@@ -106,7 +117,7 @@
 import { ref, onMounted } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useCommunityStore } from '@/store/community'
-import { apiGetPostList, apiGetCurrentCommunity } from '@/utils/api'
+import { apiGetPostList } from '@/utils/api'
 import PostCard from '@/components/PostCard.vue'
 
 const communityStore = useCommunityStore()
@@ -117,6 +128,7 @@ const currentTab = ref(0)
 
 const showDrawer = ref(false)
 const selectedCategory = ref('ALL')
+const isRefreshing = ref(false)
 
 const categoryOptions = ref([
   { label: '全部板块', value: 'ALL' },
@@ -130,21 +142,26 @@ const categoryOptions = ref([
 
 const posts = ref([])
 
-// 加载真实列表数据
-const fetchPostList = async () => {
+// 异步加载列表数据
+const fetchPostList = async (showToast = false) => {
+  isRefreshing.value = true
   try {
     const data = await apiGetPostList(selectedCategory.value)
     if (data) {
       posts.value = data
     }
+    if (showToast) {
+      uni.showToast({ title: '已刷新最新动态', icon: 'success' })
+    }
   } catch (e) {
-    console.log('读取后端动态失败，维持本地视图', e)
+    console.log('读取后端动态失败', e)
   } finally {
+    isRefreshing.value = false
     uni.stopPullDownRefresh()
   }
 }
 
-// 页面加载 & 刷新
+// 页面加载 & 显示
 onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   if (sysInfo.statusBarHeight) {
@@ -153,23 +170,22 @@ onMounted(() => {
   fetchPostList()
 })
 
-// 每次显示页面重载 (发帖返回后自动刷新数据)
 onShow(() => {
   fetchPostList()
 })
 
-// 原生下拉刷新监听
+// 原生微信下拉刷新触发
 onPullDownRefresh(() => {
-  fetchPostList()
+  fetchPostList(true)
 })
 
-const openFilterDrawer = () => {
-  showDrawer.value = true
+// 点击 Header 右侧 ↺ 按钮手动触发刷新
+const manualRefresh = () => {
+  fetchPostList(true)
 }
 
-const closeFilterDrawer = () => {
-  showDrawer.value = false
-}
+const openFilterDrawer = () => { showDrawer.value = true }
+const closeFilterDrawer = () => { showDrawer.value = false }
 
 const onSelectCategory = (val) => {
   selectedCategory.value = val
@@ -177,13 +193,12 @@ const onSelectCategory = (val) => {
 
 const onResetFilter = () => {
   selectedCategory.value = 'ALL'
-  fetchPostList()
+  fetchPostList(true)
 }
 
 const onApplyFilter = () => {
   showDrawer.value = false
-  fetchPostList()
-  uni.showToast({ title: '筛选已应用', icon: 'none' })
+  fetchPostList(true)
 }
 
 const onTabSelect = (index) => {
@@ -250,6 +265,7 @@ const onPostDetail = (id) => {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
 }
 
 .location-icon {
@@ -261,6 +277,52 @@ const onPostDetail = (id) => {
   font-size: 18px;
   font-weight: 800;
   color: #111827;
+}
+
+.header-refresh-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #E6F4EA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-icon {
+  font-size: 20px;
+  color: #059669;
+  font-weight: 700;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.refresh-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  background: #E6F4EA;
+  border-radius: 10px;
+}
+
+.indicator-icon {
+  font-size: 14px;
+}
+
+.indicator-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
 }
 
 .banner-card {
