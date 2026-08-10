@@ -1,63 +1,56 @@
-# Yoolin (悦邻里) 社区小程序 🏡
+# 友邻 Youlin (悦邻里) — 智慧社区纯粹邻里论坛与综合服务平台
 
-> 专为智慧社区与邻里互助打造的超轻量、纯粹无广告的贴吧风社区论坛小程序。
-
----
-
-## 🌟 项目亮点
-
-* **纯粹贴吧体验**：无臃肿干扰，聚焦邻里真实求助、闲置面交、房屋出租与活动交流。
-* **右侧侧滑板块筛选**：流畅的贝塞尔平滑侧滑抽屉，支持纯文字板块精准过滤。
-* **高颜值发布流程**：支持板块弹窗选择回显、9张图片/1个视频互斥逻辑，并贴心融入《邻里友好发帖公约》。
-* **精简 3 项底栏**：整合“首页与邻里圈”，配有高感矢量图标，高效直达核心场景。
+> 试点小区：**新塘街道彩虹社区 · 云彩之城**
+>
+> 专为现代品质社区打造的超轻量、无广告纯粹邻里互助小程序与智慧社区治理服务端。
 
 ---
 
-## 🛠️ 技术栈
+## ⚡ 一键并发启动 (前后端同时启动)
 
-* **前端框架**：Uni-app (`Vue 3` + `Vite` + `<script setup>`)
-* **状态管理**：Pinia (`store/community.js`)
-* **运行平台**：微信小程序 (`mp-weixin`) / H5 / iOS / Android
-* **数据流与架构**：SaaS 多小区架构 (街道 ➔ 小区 ➔ 业主/物业/商户)
+在项目根目录下，直接运行一键启动脚本：
+
+```bash
+./start.sh
+```
+
+运行后将自动完成环境校验，并并发启动：
+1. 📡 **Java (Spring Boot 3) 后端 API 服务**：`http://localhost:8080/api/v1`
+2. 🗄️ **H2 数据库控制台**：`http://localhost:8080/h2-console`
+3. 📱 **Uni-app 微信小程序编译**：输出产物至 `miniapp/dist/dev/mp-weixin`
+
+> 💡 **退出方式**：在终端按 `Ctrl + C` 即可一键优雅停止所有前后端进程。
 
 ---
 
-## 📁 目录结构
+## 📁 项目目录架构
 
 ```text
-Yoolin/
-├── miniapp/             # Uni-app 微信小程序前端源码
+社区论坛/
+├── start.sh              # 🚀 前后端一键并发启动脚本
+├── miniapp/              # 📱 Uni-app 微信小程序前端工程 (Vue3 + Pinia)
 │   ├── src/
-│   │   ├── components/  # 复用组件 (如 PostCard 帖子卡片)
-│   │   ├── pages/       # 页面 (index 首页, publish 发布页, service 服务, mine 我的)
-│   │   └── store/       # Pinia 状态库 (小区/用户状态)
-│   └── pages.json       # 页面路由与 3 项 TabBar 配置
-├── demo/                # H5 高保真 HTML 交互原型 (index.html)
-├── docs/                # 产品架构、商业模式与数据库 Schema 规划文档
-└── README.md            # 项目说明
+│   │   ├── pages/        # 页面 (首页/帖子详情/发布/服务大厅/个人中心)
+│   │   ├── store/        # Pinia 社区与用户状态管理
+│   │   └── utils/        # 全局媒体压缩/上传控制与网络封装
+│   └── dist/dev/mp-weixin # 微信开发者工具导入目录
+├── server/               # 📡 Java Spring Boot 3 企业级后端服务
+│   ├── src/main/java/    # RESTful API 控制器、Service、Mapper、Entity
+│   └── src/main/resources/ # application.yml, schema.sql, data.sql
+└── demo/                 # 🌐 H5 单页高保真交互演示页面 (GitHub Pages)
 ```
 
 ---
 
-## 🚀 快速启动
+## 🛠️ 技术选型
 
-### 1. 安装依赖
-
-```bash
-cd miniapp
-npm install
-```
-
-### 2. 本地开发编译 (微信小程序)
-
-```bash
-npm run dev:mp-weixin
-```
-
-编译产物将生成在 `miniapp/dist/dev/mp-weixin`，使用 **微信开发者工具** 导入该目录即可预览和开发。
+- **前端小程序**：Vue3 + Uni-app + Vanilla CSS + Pinia
+- **后端服务端**：Java 17 + Spring Boot 3.2.x + MyBatis-Plus + H2 数据库
+- **部署发布**：支持 Docker 单文件部署与 GitHub Pages 展示
 
 ---
 
-## 📄 开源许可
+## 🔗 线上预览与 GitHub 仓库
 
-[MIT License](LICENSE)
+- **GitHub 仓库**：[https://github.com/mjj949723261-prog/Youlin.git](https://github.com/mjj949723261-prog/Youlin.git)
+- **网页版体验**：[https://mjj949723261-prog.github.io/Youlin/](https://mjj949723261-prog.github.io/Youlin/)
