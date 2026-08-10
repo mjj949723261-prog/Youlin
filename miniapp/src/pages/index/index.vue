@@ -8,11 +8,6 @@
           <text class="location-icon">📍</text>
           <text class="community-name">{{ communityStore.currentCommunity.name }}</text>
         </view>
-
-        <!-- 右侧手动刷新图标按钮 -->
-        <view class="header-refresh-btn" @click="manualRefresh">
-          <text class="refresh-icon" :class="{ spinning: isRefreshing }">↺</text>
-        </view>
       </view>
     </view>
 
@@ -52,14 +47,21 @@
       </view>
     </view>
 
-    <!-- 4. 邻里圈沉浸式 Feed 帖子列表 -->
-    <view class="feed-list">
-      <!-- 下拉刷新状态小提示条 -->
-      <view v-if="isRefreshing" class="refresh-indicator">
-        <text class="indicator-icon spinning">⌛</text>
-        <text class="indicator-text">正在获取【云彩之城】最新动态...</text>
+    <!-- 4. 放置在“推荐 邻里圈”Tab 栏正下方的专属列表刷新指示与点击刷新条 -->
+    <view class="tab-bottom-refresh-bar" @click="manualRefresh">
+      <view class="refresh-left">
+        <text class="refresh-dot"></text>
+        <text class="refresh-title">最新帖子列表</text>
       </view>
 
+      <view class="refresh-right">
+        <text class="refresh-time-text">{{ isRefreshing ? '正在拉取最新数据...' : '刚才更新' }}</text>
+        <text class="refresh-spin-icon" :class="{ spinning: isRefreshing }">↺</text>
+      </view>
+    </view>
+
+    <!-- 5. 邻里圈沉浸式 Feed 帖子列表 -->
+    <view class="feed-list">
       <block v-if="posts.length > 0">
         <PostCard
           v-for="post in posts"
@@ -70,16 +72,16 @@
       </block>
       <view v-else class="empty-state">
         <text class="empty-icon">🍃</text>
-        <text class="empty-text">该板块下暂无帖子动态，下拉刷新试试吧~</text>
+        <text class="empty-text">该板块下暂无帖子动态，点击上方 ↺ 刷新试试吧~</text>
       </view>
     </view>
 
-    <!-- 5. 右下角高颜值悬浮发帖加号大按钮 (FAB) -->
+    <!-- 6. 右下角高颜值悬浮发帖加号大按钮 (FAB) -->
     <view class="fab-post-btn" @click="onPublishClick">
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 6. 右侧平滑动画抽屉筛选弹窗 -->
+    <!-- 7. 右侧平滑动画抽屉筛选弹窗 -->
     <view class="drawer-mask" :class="{ show: showDrawer }" @click="closeFilterDrawer"></view>
     <view class="drawer-panel" :class="{ show: showDrawer }">
       <view class="drawer-header">
@@ -142,7 +144,7 @@ const categoryOptions = ref([
 
 const posts = ref([])
 
-// 异步加载列表数据
+// 加载/刷新列表数据
 const fetchPostList = async (showToast = false) => {
   isRefreshing.value = true
   try {
@@ -151,7 +153,7 @@ const fetchPostList = async (showToast = false) => {
       posts.value = data
     }
     if (showToast) {
-      uni.showToast({ title: '已刷新最新动态', icon: 'success' })
+      uni.showToast({ title: '列表数据已刷新', icon: 'success' })
     }
   } catch (e) {
     console.log('读取后端动态失败', e)
@@ -161,7 +163,6 @@ const fetchPostList = async (showToast = false) => {
   }
 }
 
-// 页面加载 & 显示
 onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   if (sysInfo.statusBarHeight) {
@@ -174,12 +175,11 @@ onShow(() => {
   fetchPostList()
 })
 
-// 原生微信下拉刷新触发
 onPullDownRefresh(() => {
   fetchPostList(true)
 })
 
-// 点击 Header 右侧 ↺ 按钮手动触发刷新
+// 点击“推荐 邻里圈”下方的刷新条刷新列表数据
 const manualRefresh = () => {
   fetchPostList(true)
 }
@@ -265,7 +265,6 @@ const onPostDetail = (id) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
 }
 
 .location-icon {
@@ -277,52 +276,6 @@ const onPostDetail = (id) => {
   font-size: 18px;
   font-weight: 800;
   color: #111827;
-}
-
-.header-refresh-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #E6F4EA;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.refresh-icon {
-  font-size: 20px;
-  color: #059669;
-  font-weight: 700;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.refresh-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 0;
-  margin-bottom: 8px;
-  background: #E6F4EA;
-  border-radius: 10px;
-}
-
-.indicator-icon {
-  font-size: 14px;
-}
-
-.indicator-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #059669;
 }
 
 .banner-card {
@@ -379,7 +332,7 @@ const onPostDetail = (id) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .tabs {
@@ -441,6 +394,63 @@ const onPostDetail = (id) => {
   font-size: 18px;
   color: #059669;
   font-weight: 700;
+}
+
+/* 正好放在“推荐 邻里圈 同城”Tab 下方的刷新指示与控制条 */
+.tab-bottom-refresh-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #E6F4EA;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.refresh-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+}
+
+.refresh-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #065F46;
+}
+
+.refresh-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-time-text {
+  font-size: 11px;
+  color: #059669;
+}
+
+.refresh-spin-icon {
+  font-size: 16px;
+  font-weight: 800;
+  color: #059669;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .empty-state {
