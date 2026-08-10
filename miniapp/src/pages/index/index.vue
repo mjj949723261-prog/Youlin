@@ -81,7 +81,7 @@
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 7. 微信授权登录 Modal 遮罩层 (支持一键选微信头像与快捷填写微信昵称) -->
+    <!-- 7. 微信授权登录 Modal 遮罩层 -->
     <view class="wx-login-mask" :class="{ show: communityState.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
@@ -89,22 +89,7 @@
           <text class="app-title">欢迎使用 这儿有邻</text>
         </view>
         <text class="login-sub">邻里纯粹交流与互助平台</text>
-        
-        <!-- 微信头像与昵称一键设置区 -->
-        <view class="modal-profile-box">
-          <button class="modal-avatar-btn" open-type="chooseAvatar" @chooseavatar="onModalChooseAvatar">
-            <image class="modal-avatar-img" :src="modalAvatar" mode="aspectFill" />
-            <view class="avatar-badge-text">选微信头像</view>
-          </button>
-          
-          <input
-            type="nickname"
-            class="modal-nickname-input"
-            v-model="modalNickname"
-            placeholder="点击自动获取微信昵称"
-            @blur="onModalNicknameBlur"
-          />
-        </view>
+        <text class="login-desc">微信授权登录后可解锁发帖互动、社区服务与专属门牌身份。</text>
 
         <button class="wx-login-btn" @click="handleWxLogin">
           <text class="wx-icon">💬</text>
@@ -167,9 +152,6 @@ const selectedCategory = ref('ALL')
 const isRefreshing = ref(false)
 const lastRefreshTimeText = ref('')
 
-const modalAvatar = ref('https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132')
-const modalNickname = ref('')
-
 const getNowTimeStr = () => {
   const now = new Date()
   const hh = String(now.getHours()).padStart(2, '0')
@@ -230,32 +212,11 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 选微信头像回调
-const onModalChooseAvatar = (e) => {
-  if (e.detail && e.detail.avatarUrl) {
-    modalAvatar.value = e.detail.avatarUrl
-    communityStore.syncWxProfile(null, e.detail.avatarUrl)
-    uni.showToast({ title: '已选取微信头像', icon: 'none' })
-  }
-}
-
-// 填微信昵称回调
-const onModalNicknameBlur = (e) => {
-  const val = e.detail.value || modalNickname.value
-  if (val) {
-    modalNickname.value = val
-    communityStore.syncWxProfile(val, null)
-  }
-}
-
 // 微信登录点击
 const handleWxLogin = async () => {
   uni.showLoading({ title: '正在安全登录...' })
   try {
     await communityStore.performWxLogin()
-    if (modalNickname.value || modalAvatar.value) {
-      await communityStore.syncWxProfile(modalNickname.value, modalAvatar.value)
-    }
   } catch (e) {
     console.log(e)
   } finally {
@@ -615,7 +576,7 @@ const onPostDetail = (id) => {
   width: 100%;
   background: #FFFFFF;
   border-radius: 24px;
-  padding: 24px 20px;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -626,107 +587,66 @@ const onPostDetail = (id) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .app-icon {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .app-title {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   color: #111827;
 }
 
 .login-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: #059669;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-.modal-profile-box {
-  width: 100%;
+.login-desc {
+  font-size: 13px;
+  color: #4B5563;
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 20px;
   background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
   padding: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-  box-sizing: border-box;
-}
-
-.modal-avatar-btn {
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  line-height: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  border: none;
-}
-
-.modal-avatar-img {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2px solid #10B981;
-}
-
-.avatar-badge-text {
-  font-size: 9px;
-  color: #059669;
-  font-weight: 700;
-  background: #E6F4EA;
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-.modal-nickname-input {
-  flex: 1;
-  height: 38px;
-  background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  border-radius: 10px;
-  padding: 0 10px;
-  font-size: 14px;
-  color: #111827;
+  border-radius: 14px;
 }
 
 .wx-login-btn {
   width: 100%;
-  height: 46px;
-  border-radius: 23px;
+  height: 48px;
+  border-radius: 24px;
   background: linear-gradient(135deg, #07C160 0%, #059669 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.35);
+  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.4);
   border: none;
   margin-bottom: 12px;
 }
 
 .wx-icon {
-  font-size: 18px;
+  font-size: 20px;
   color: #FFFFFF;
 }
 
 .btn-text {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: #FFFFFF;
 }
 
 .guest-btn {
-  font-size: 12px;
+  font-size: 13px;
   color: #6B7280;
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-weight: 600;
 }
 
