@@ -38,7 +38,7 @@
         </template>
       </view>
 
-      <!-- 2. 下一行数据栏：仅显示【我的发帖】与【收到的回复】 -->
+      <!-- 2. 下一行数据栏：包含【我的发帖】、【收到的回复】与【我的收藏】 -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.postCount : '--' }}</text>
@@ -49,6 +49,12 @@
         <view class="stat-item" @click="onNavToMyPosts('REPLIES')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.replyCount : '--' }}</text>
           <text class="stat-label">收到的回复</text>
+        </view>
+        <view class="stat-divider"></view>
+
+        <view class="stat-item" @click="onNavToFavorite">
+          <text class="stat-num">{{ communityState.isLoggedIn ? '3' : '--' }}</text>
+          <text class="stat-label">我的收藏</text>
         </view>
       </view>
     </view>
@@ -70,20 +76,7 @@
           </view>
         </view>
 
-        <!-- 2. ⭐ 我的收藏 -->
-        <view class="menu-item" @click="onNavToFavorite">
-          <view class="menu-left">
-            <text class="menu-icon">⭐</text>
-            <text class="menu-label">我的收藏</text>
-          </view>
-          <view class="menu-right">
-            <text v-if="communityState.isLoggedIn" class="menu-sub-tip">已收藏 3 条邻里帖</text>
-            <text v-else class="menu-sub-tip">未登录</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <!-- 3. 我的消息 -->
+        <!-- 2. 我的消息 -->
         <view class="menu-item" @click="onNavToNotice">
           <view class="menu-left">
             <text class="menu-icon">🔔</text>
@@ -96,7 +89,7 @@
           </view>
         </view>
 
-        <!-- 4. 系统设置 -->
+        <!-- 3. 系统设置 -->
         <view class="menu-item" @click="onOpenSettings">
           <view class="menu-left">
             <text class="menu-icon">⚙️</text>
