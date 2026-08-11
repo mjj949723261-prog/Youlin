@@ -25,7 +25,7 @@
           </view>
         </template>
 
-        <!-- 未登录状态：默认头像 + 直接大字“去登录” -->
+        <!-- 未登录状态：点击默认头像或“去登录”大字，直接触发微信授权登录逻辑 -->
         <template v-else>
           <view class="avatar-box" @click="onTriggerLogin">
             <image class="avatar" :src="guestAvatar" mode="aspectFill" />
@@ -33,7 +33,7 @@
           
           <view class="user-info" @click="onTriggerLogin">
             <text class="guest-title-text">去登录</text>
-            <text class="guest-sub-text">点击完成微信授权，解锁社区功能 ›</text>
+            <text class="guest-sub-text">点击一键完成微信授权，解锁社区功能 ›</text>
           </view>
         </template>
       </view>
@@ -236,9 +236,17 @@ const onCallGetUserProfile = async () => {
   if (res) uni.showToast({ title: '微信资料已授权！', icon: 'success' })
 }
 
-const onTriggerLogin = () => {
-  communityStore.openLoginModal()
-  uni.switchTab({ url: '/pages/index/index' })
+// 核心登录逻辑：点击直接一键执行全自动微信授权登录！
+const onTriggerLogin = async () => {
+  uni.showLoading({ title: '微信安全授权登录中...' })
+  const success = await communityStore.loginWithWxCode()
+  uni.hideLoading()
+  if (success) {
+    uni.showToast({ title: '微信授权登录成功！', icon: 'success' })
+    fetchUserStats()
+  } else {
+    uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
+  }
 }
 
 const onResetLogin = () => {
