@@ -15,7 +15,7 @@
             <view class="name-line">
               <text class="user-name-text">{{ communityState.currentUser.nickname }}</text>
             </view>
-            <!-- 第二行：纯粹干练的 7 大角色 Tag 勋章（无图标、无点击提示文本） -->
+            <!-- 第二行：纯粹干练的 7 大角色 Tag 勋章 -->
             <view class="property-line">
               <view class="role-badge-tag" :class="getRoleBadgeClass(communityState.currentUser.roleCode)">
                 <text class="role-badge-text">{{ getRoleBadgeText(communityState.currentUser) }}</text>
@@ -108,6 +108,13 @@
 
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- 4. 登录后重新弹框：完善微信个人资料弹窗 -->
+    <UserProfileModal
+      :visible="isProfileModalVisible"
+      @close="isProfileModalVisible = false"
+      @saved="onProfileSaved"
+    />
   </view>
 </template>
 
@@ -116,9 +123,11 @@ import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useCommunityStore, state as communityState } from '@/store/community'
 import { apiGetUserStats } from '@/utils/api'
+import UserProfileModal from '@/components/UserProfileModal.vue'
 
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
+const isProfileModalVisible = ref(false)
 
 const guestAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250'
 
@@ -220,6 +229,7 @@ const onOpenSettings = () => {
 
   uni.showActionSheet({
     itemList: [
+      '✏️ 重新弹框完善微信资料',
       '📷 修改微信头像 (chooseAvatar)',
       '🏷️ 修改微信昵称 (nickname)',
       '📱 关联微信手机号',
@@ -228,22 +238,24 @@ const onOpenSettings = () => {
     ],
     success: async (res) => {
       if (res.tapIndex === 0) {
+        isProfileModalVisible.value = true
+      } else if (res.tapIndex === 1) {
         uni.showModal({
           title: '📷 微信原生选头像',
           content: '请直接在界面顶部头像图标上点击触发微信官方原生 chooseAvatar 相册选图！',
           showCancel: false
         })
-      } else if (res.tapIndex === 1) {
+      } else if (res.tapIndex === 2) {
         uni.showModal({
           title: '🏷️ 微信原生填昵称',
           content: '请在输入框点击调起微信键盘上方浮现的官方真实微信昵称快捷填入！',
           showCancel: false
         })
-      } else if (res.tapIndex === 2) {
-        uni.showToast({ title: '已关联验证微信手机号', icon: 'success' })
       } else if (res.tapIndex === 3) {
-        onSwitchRoleDialog()
+        uni.showToast({ title: '已关联验证微信手机号', icon: 'success' })
       } else if (res.tapIndex === 4) {
+        onSwitchRoleDialog()
+      } else if (res.tapIndex === 5) {
         onCallGetUserProfile()
       }
     }
@@ -279,17 +291,22 @@ const onCallGetUserProfile = async () => {
   if (res) uni.showToast({ title: '微信资料已授权！', icon: 'success' })
 }
 
-// 核心登录逻辑：点击直接一键执行全自动微信授权登录！
+// 核心登录逻辑：点击一键授权登录，成功后【重新弹框】引导完善微信个人资料！
 const onTriggerLogin = async () => {
   uni.showLoading({ title: '微信安全授权登录中...' })
   const success = await communityStore.loginWithWxCode()
   uni.hideLoading()
   if (success) {
-    uni.showToast({ title: '微信授权登录成功！', icon: 'success' })
     fetchUserStats()
+    // 登录成功后重新弹框引导设置微信头像与昵称！
+    isProfileModalVisible.value = true
   } else {
     uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
   }
+}
+
+const onProfileSaved = () => {
+  fetchUserStats()
 }
 
 const onResetLogin = () => {
