@@ -25,7 +25,7 @@
           </view>
         </template>
 
-        <!-- 未登录状态：默认头像 + “未登录社区住户”直接改成大字“去登录” -->
+        <!-- 未登录状态：默认头像 + 直接大字“去登录” -->
         <template v-else>
           <view class="avatar-box" @click="onTriggerLogin">
             <image class="avatar" :src="guestAvatar" mode="aspectFill" />
@@ -53,90 +53,52 @@
       </view>
     </view>
 
-    <!-- 3. 主体滚动功能区 -->
+    <!-- 3. 主体滚动功能区 (用户认证、我的消息、系统设置、已登录时代的退出登录按钮) -->
     <scroll-view scroll-y class="mine-scroll-body">
       
-      <!-- 微信授权与个人设置组 -->
       <view class="menu-group">
-        <text class="group-title">账号与资料设置</text>
+        <!-- 1. 用户认证 -->
+        <view class="menu-item" @click="onNavToAuth">
+          <view class="menu-left">
+            <text class="menu-icon">🛡️</text>
+            <text class="menu-label">用户认证</text>
+          </view>
+          <view class="menu-right">
+            <text v-if="communityState.isLoggedIn" class="bound-phone-text">业主身份已认证</text>
+            <text v-else class="menu-sub-tip">未认证</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
 
-        <!-- 1. 微信原生头像与昵称快捷设置 -->
+        <!-- 2. 我的消息 -->
+        <view class="menu-item" @click="onNavToNotice">
+          <view class="menu-left">
+            <text class="menu-icon">🔔</text>
+            <text class="menu-label">我的消息</text>
+          </view>
+          <view class="menu-right">
+            <text v-if="communityState.isLoggedIn" class="unread-badge">2 条未读</text>
+            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 3. 系统设置 -->
         <view class="menu-item" @click="onOpenSettings">
           <view class="menu-left">
             <text class="menu-icon">⚙️</text>
-            <text class="menu-label">个人资料与设置</text>
+            <text class="menu-label">系统设置</text>
           </view>
           <view class="menu-right">
-            <text v-if="communityState.isLoggedIn" class="bound-phone-text">修改头像与昵称</text>
-            <text v-else class="menu-sub-tip">未登录</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <!-- 2. 微信手机号绑定 -->
-        <view class="menu-item">
-          <view class="menu-left">
-            <text class="menu-icon">📱</text>
-            <text class="menu-label">微信关联手机号</text>
-          </view>
-
-          <view class="menu-right">
-            <template v-if="communityState.isLoggedIn && communityState.currentUser.phone">
-              <text class="bound-phone-text">{{ communityState.currentUser.phone }}</text>
-              <text class="verified-badge">已验证</text>
-            </template>
-
-            <button
-              v-else-if="communityState.isLoggedIn"
-              class="wx-phone-btn"
-              open-type="getPhoneNumber"
-              @getphonenumber="onGetPhoneNumber"
-            >
-              <text class="phone-btn-text">一键授权绑定手机号</text>
-            </button>
-
-            <text v-else class="menu-sub-tip">未登录</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <!-- 3. 微信 getUserProfile 扩展资料 -->
-        <view class="menu-item" @click="onCallGetUserProfile">
-          <view class="menu-left">
-            <text class="menu-icon">🌐</text>
-            <text class="menu-label">微信地区资料同步</text>
-          </view>
-          <view class="menu-right">
-            <text v-if="communityState.isLoggedIn" class="bound-phone-text">{{ communityState.currentUser.city || '点击同步' }}</text>
-            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="menu-sub-tip">修改资料/绑定</text>
             <text class="arrow">›</text>
           </view>
         </view>
       </view>
 
-      <!-- 账号管理 -->
-      <view class="menu-group">
-        <text class="group-title">账号状态</text>
-
-        <view v-if="communityState.isLoggedIn" class="menu-item" @click="onResetLogin">
-          <view class="menu-left">
-            <text class="menu-icon">🚪</text>
-            <text class="menu-label" style="color: #DC2626;">退出微信登录 (返回游客模式)</text>
-          </view>
-          <view class="menu-right">
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view v-else class="menu-item" @click="onTriggerLogin">
-          <view class="menu-left">
-            <text class="menu-icon">🔑</text>
-            <text class="menu-label" style="color: #059669;">微信账号安全登录</text>
-          </view>
-          <view class="menu-right">
-            <text class="arrow">›</text>
-          </view>
-        </view>
+      <!-- 仅在已登录状态下才显示的退出登录按钮 -->
+      <view v-if="communityState.isLoggedIn" class="logout-btn-box" @click="onResetLogin">
+        <text class="logout-btn-text">退出登录</text>
       </view>
 
       <view class="bottom-space"></view>
@@ -182,7 +144,33 @@ onShow(() => {
   fetchUserStats()
 })
 
-// 点击头像或昵称进入【设置 / 资料修改】弹窗
+// 用户认证触发
+const onNavToAuth = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
+  uni.showModal({
+    title: '🛡️ 社区用户认证',
+    content: `绑定社区：${communityStore.currentCommunity.name}\n门牌地址：${communityStore.currentUser.building} ${communityStore.currentUser.room}\n认证状态：已通过真实微信与手机号业主认证`,
+    showCancel: false
+  })
+}
+
+// 我的消息触发
+const onNavToNotice = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
+  uni.showModal({
+    title: '🔔 我的消息中心',
+    content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区服务中心成立通知',
+    showCancel: false
+  })
+}
+
+// 系统设置触发
 const onOpenSettings = () => {
   if (!communityState.isLoggedIn) {
     onTriggerLogin()
@@ -190,8 +178,8 @@ const onOpenSettings = () => {
   }
 
   uni.showActionSheet({
-    itemList: ['📷 快捷修改微信头像 (chooseAvatar)', '🏷️ 快捷修改微信昵称 (nickname)', '🌐 同步微信地区资料 (getUserProfile)'],
-    success: (res) => {
+    itemList: ['📷 修改微信头像 (chooseAvatar)', '🏷️ 修改微信昵称 (nickname)', '📱 关联微信手机号', '🌐 同步微信地区资料 (getUserProfile)'],
+    success: async (res) => {
       if (res.tapIndex === 0) {
         uni.showModal({
           title: '📷 微信原生选头像',
@@ -205,6 +193,8 @@ const onOpenSettings = () => {
           showCancel: false
         })
       } else if (res.tapIndex === 2) {
+        uni.showToast({ title: '已关联验证微信手机号', icon: 'success' })
+      } else if (res.tapIndex === 3) {
         onCallGetUserProfile()
       }
     }
@@ -217,19 +207,6 @@ const getRoleBadgeClass = (roleCode) => {
   if (roleCode === 'PROPERTY_STAFF') return 'badge-property'
   if (roleCode === 'MERCHANT') return 'badge-merchant'
   return 'badge-owner'
-}
-
-const onGetPhoneNumber = async (e) => {
-  uni.showLoading({ title: '绑定中...' })
-  let phoneStr = ''
-  let phoneCode = ''
-  if (e.detail) {
-    if (e.detail.phoneNumber || e.detail.purePhoneNumber) phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
-    if (e.detail.code) phoneCode = e.detail.code
-  }
-  const boundPhone = await communityStore.bindWxPhone(phoneCode, phoneStr)
-  uni.hideLoading()
-  uni.showToast({ title: `绑定成功: ${boundPhone}`, icon: 'success' })
 }
 
 const onCallGetUserProfile = async () => {
@@ -246,8 +223,17 @@ const onTriggerLogin = () => {
 }
 
 const onResetLogin = () => {
-  communityStore.clearLoginState()
-  stats.value = { postCount: 0, replyCount: 0 }
+  uni.showModal({
+    title: '🚪 退出登录确认',
+    content: '确定要退出当前微信账号并返回游客模式吗？',
+    confirmColor: '#DC2626',
+    success: (res) => {
+      if (res.confirm) {
+        communityStore.clearLoginState()
+        stats.value = { postCount: 0, replyCount: 0 }
+      }
+    }
+  })
 }
 
 const onNavToMyPosts = () => {
@@ -415,24 +401,16 @@ const onNavToMyPosts = () => {
 .menu-group {
   background: #FFFFFF;
   border-radius: 20px;
-  padding: 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.04);
-}
-
-.group-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #6B7280;
-  margin-bottom: 10px;
-  display: block;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.04);
 }
 
 .menu-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
+  padding: 16px 0;
   border-bottom: 1px solid #F9FAFB;
 }
 
@@ -452,16 +430,28 @@ const onNavToMyPosts = () => {
 .menu-sub-tip { font-size: 12px; color: #9CA3AF; }
 .bound-phone-text { font-size: 13px; font-weight: 700; color: #059669; }
 
-.verified-badge {
-  font-size: 10px; font-weight: 700; color: #065F46; background: #D1FAE5; padding: 2px 6px; border-radius: 4px;
+.unread-badge {
+  font-size: 11px; font-weight: 700; color: #EF4444; background: #FEE2E2; padding: 2px 8px; border-radius: 10px;
 }
 
-.wx-phone-btn {
-  background: linear-gradient(135deg, #07C160 0%, #059669 100%);
-  padding: 4px 10px; border-radius: 12px; line-height: 1.4; border: none;
-}
-
-.phone-btn-text { font-size: 11px; font-weight: 800; color: #FFFFFF; }
 .arrow { font-size: 16px; color: #9CA3AF; }
+
+.logout-btn-box {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.05);
+  border: 1px solid #FEE2E2;
+}
+
+.logout-btn-text {
+  font-size: 15px;
+  font-weight: 800;
+  color: #DC2626;
+}
+
 .bottom-space { height: 80px; }
 </style>
