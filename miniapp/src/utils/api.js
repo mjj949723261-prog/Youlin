@@ -1,6 +1,8 @@
 import { state } from '@/store/community'
 
-const BASE_URL = 'http://localhost:8080/api/v1'
+// 真机调试与模拟器通用局域网 IP (支持 Mac 本机 Wi-Fi 与微信真机流畅握手)
+const LOCAL_MAC_IP = '172.16.10.69'
+const BASE_URL = `http://${LOCAL_MAC_IP}:8080/api/v1`
 
 const request = (url, method = 'GET', data = {}) => {
   return new Promise((resolve, reject) => {
