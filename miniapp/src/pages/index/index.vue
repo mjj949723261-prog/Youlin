@@ -51,85 +51,96 @@
     <view class="tab-bottom-refresh-bar" @click="manualRefresh">
       <view class="refresh-left">
         <text class="refresh-dot"></text>
-        <text class="refresh-title">最新动态列表</text>
+        <text class="refresh-title">最新帖子 Feed 流</text>
       </view>
-
       <view class="refresh-right">
-        <text class="refresh-time-text">{{ isRefreshing ? '正在拉取最新数据...' : (lastRefreshTimeText + ' 刷新') }}</text>
-        <text class="refresh-spin-icon" :class="{ spinning: isRefreshing }">↺</text>
+        <text class="refresh-time-text">上次刷新 {{ lastRefreshTimeText }}</text>
+        <text class="refresh-spin-icon" :class="{ spinning: isRefreshing }">↻</text>
       </view>
     </view>
 
-    <!-- 5. 邻里圈沉浸式 Feed 帖子列表 -->
-    <view class="feed-list">
-      <block v-if="posts.length > 0">
+    <!-- 5. 真实数据 Feed 流 (接入后端真实接口与纯写库数据) -->
+    <view class="post-feed">
+      <view v-if="posts && posts.length > 0" class="post-list">
         <PostCard
           v-for="post in posts"
           :key="post.id"
           :post="post"
           @click="onPostDetail(post.id)"
+          @deleted="fetchPostList"
         />
-      </block>
+      </view>
+
       <view v-else class="empty-state">
         <text class="empty-icon">🍃</text>
-        <text class="empty-text">暂无动态，点击上方 ↺ 刷新试试吧~</text>
+        <text class="empty-text">当前分类下暂无邻里帖子，抢先发一条吧~</text>
       </view>
     </view>
 
-    <!-- 6. 右下角悬浮发帖大按钮 (FAB) -->
+    <!-- 6. 悬浮发帖按钮 -->
     <view class="fab-post-btn" @click="onPublishClick">
-      <text class="plus-icon">+</text>
+      <text class="plus-icon">＋</text>
     </view>
 
-    <!-- 7. 微信授权登录 Modal 遮罩层 (一步到位，登录成功直接自动赋予微信头像并解封) -->
+    <!-- 7. 全屏微信快捷授权弹窗 -->
     <view class="wx-login-mask" :class="{ show: communityState.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
           <text class="app-icon">🏡</text>
-          <text class="app-title">欢迎使用 这儿有邻</text>
+          <text class="app-title">这儿有邻</text>
         </view>
-        <text class="login-sub">邻里纯粹交流与互助平台</text>
-        <text class="login-desc">微信授权登录后可解锁发帖互动、社区服务与专属门牌身份。</text>
+        <text class="login-sub">温暖·纯粹·极简的邻里交流社区</text>
+
+        <view class="login-desc">
+          登录后开启专属社区广播、邻里互助、报修及全套功能体验。
+        </view>
 
         <button class="wx-login-btn" @click="handleWxLogin">
           <text class="wx-icon">💬</text>
           <text class="btn-text">微信一键快捷登录</text>
         </button>
 
-        <text class="guest-btn" @click="handleGuestLook">👀 暂不登录，以游客身份先逛逛</text>
+        <text class="guest-btn" @click="handleGuestLook">先逛逛 (游客模式)</text>
       </view>
     </view>
 
-    <!-- 8. 右侧平滑动画抽屉筛选弹窗 -->
+    <!-- 8. 右侧极简筛选抽屉 -->
     <view class="drawer-mask" :class="{ show: showDrawer }" @click="closeFilterDrawer"></view>
     <view class="drawer-panel" :class="{ show: showDrawer }">
       <view class="drawer-header">
-        <text class="drawer-title">板块筛选</text>
+        <text class="drawer-title">帖子分类筛选</text>
         <text class="close-btn" @click="closeFilterDrawer">✕</text>
       </view>
 
-      <scroll-view scroll-y class="drawer-body">
+      <view class="drawer-body">
         <view class="filter-group">
-          <text class="group-title">选择社区板块</text>
+          <text class="group-title">板块类型</text>
           <view class="chip-grid">
             <view
-              v-for="cat in categoryOptions"
-              :key="cat.value"
+              v-for="item in categoryOptions"
+              :key="item.value"
               class="chip-item"
-              :class="{ active: selectedCategory === cat.value }"
-              @click="onSelectCategory(cat.value)"
+              :class="{ active: selectedCategory === item.value }"
+              @click="onSelectCategory(item.value)"
             >
-              <text class="chip-text">{{ cat.label }}</text>
+              <text class="chip-text">{{ item.label }}</text>
             </view>
           </view>
         </view>
-      </scroll-view>
+      </view>
 
       <view class="drawer-footer">
         <button class="reset-btn" @click="onResetFilter">重置</button>
         <button class="confirm-btn" @click="onApplyFilter">确认筛选</button>
       </view>
     </view>
+
+    <!-- 手机号快捷授权绑定弹窗 -->
+    <PhoneBindModal
+      :visible="isPhoneModalVisible"
+      @close="isPhoneModalVisible = false"
+      @success="onPhoneBindSuccess"
+    />
 
   </view>
 </template>
@@ -140,6 +151,7 @@ import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useCommunityStore, state as communityState } from '@/store/community'
 import { apiGetPostList } from '@/utils/api'
 import PostCard from '@/components/PostCard.vue'
+import PhoneBindModal from '@/components/PhoneBindModal.vue'
 
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
@@ -151,6 +163,7 @@ const showDrawer = ref(false)
 const selectedCategory = ref('ALL')
 const isRefreshing = ref(false)
 const lastRefreshTimeText = ref('')
+const isPhoneModalVisible = ref(false)
 
 const getNowTimeStr = () => {
   const now = new Date()
@@ -212,25 +225,21 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 点击【微信一键快捷登录】：一步到位完成登录鉴权并全自动展示微信用户头像，解封进入首页！
 const handleWxLogin = async () => {
   uni.showLoading({ title: '正在授权登录...' })
   try {
-    await communityStore.performWxLogin()
+    await communityStore.loginWithWxCode()
   } catch (e) {
     console.log(e)
   } finally {
     uni.hideLoading()
-    communityState.isLoggedIn = true
     communityState.showLoginModal = false
-    uni.setStorageSync('hasLoggedIn', true)
     uni.showToast({ title: '微信登录成功！', icon: 'success' })
   }
 }
 
-// 点击暂不登录，进入游客模式
 const handleGuestLook = () => {
-  communityStore.enterGuestMode()
+  communityStore.clearLoginState()
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -262,7 +271,7 @@ const onViewNotice = () => {
   })
 }
 
-// 发帖强鉴权
+// 发帖强鉴权 + 手机号实名拦截
 const onPublishClick = () => {
   if (!communityState.isLoggedIn) {
     uni.showModal({
@@ -278,6 +287,19 @@ const onPublishClick = () => {
     })
     return
   }
+
+  // 国家实名合规判定：未绑定手机号时强拉取一键授权手机号弹窗！
+  if (!communityState.currentUser.phone) {
+    isPhoneModalVisible.value = true
+    return
+  }
+
+  uni.navigateTo({
+    url: '/pages/publish/publish'
+  })
+}
+
+const onPhoneBindSuccess = () => {
   uni.navigateTo({
     url: '/pages/publish/publish'
   })

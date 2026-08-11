@@ -11,7 +11,7 @@
       </view>
     </view>
 
-    <!-- 2. 可平滑滚动的主体列表区 (顶部留出 Header 避让距离) -->
+    <!-- 2. 可平滑滚动的主体列表区 (顶部留出 Header 避查距离) -->
     <scroll-view
       scroll-y
       class="detail-body"
@@ -26,7 +26,7 @@
             <view class="name-line">
               <text class="author-name">{{ post.authorName }}</text>
               <text class="building-badge">{{ post.building }}</text>
-              <text class="role-badge">{{ post.roleTag || '本小区住户' }}</text>
+              <text class="role-badge">{{ post.roleTag || '社区住户' }}</text>
             </view>
             <text class="post-time">楼主 · 发布于 {{ post.publishTime }}</text>
           </view>
@@ -224,6 +224,12 @@
       </view>
     </view>
 
+    <!-- 手机号快捷授权绑定弹窗 -->
+    <PhoneBindModal
+      :visible="isPhoneModalVisible"
+      @close="isPhoneModalVisible = false"
+      @success="onPhoneBindSuccess"
+    />
   </view>
 </template>
 
@@ -232,8 +238,10 @@ import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
 import { apiGetPostDetail, apiGetComments, apiAddComment, apiDeletePost, apiDeleteComment, apiReportContent } from '@/utils/api'
-import { state as communityState } from '@/store/community'
+import { state as communityState, useCommunityStore } from '@/store/community'
+import PhoneBindModal from '@/components/PhoneBindModal.vue'
 
+const communityStore = useCommunityStore()
 const statusBarHeight = ref(20)
 const postId = ref(null)
 const inputContent = ref('')
@@ -241,6 +249,7 @@ const replyTargetComment = ref(null)
 const replyTargetUser = ref('')
 const commentMedia = ref({ type: null, path: '' })
 const isPlayingVideo = ref(false)
+const isPhoneModalVisible = ref(false)
 
 const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
 const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600'
@@ -434,6 +443,25 @@ const clearCommentMedia = () => {
 const onSendComment = async () => {
   if (!canSend.value) return
 
+  if (!communityState.isLoggedIn) {
+    communityStore.openLoginModal()
+    return
+  }
+
+  // 实名合规：校验是否绑定手机号，未绑定则唤起一键授权弹窗
+  if (!communityState.currentUser.phone) {
+    isPhoneModalVisible.value = true
+    return
+  }
+
+  doSendComment()
+}
+
+const onPhoneBindSuccess = () => {
+  doSendComment()
+}
+
+const doSendComment = async () => {
   const text = inputContent.value.trim()
   uni.showLoading({ title: '正在回复...' })
 
@@ -802,18 +830,18 @@ const onSendComment = async () => {
 .comment-name-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .comment-name {
   font-size: 14px;
   font-weight: 700;
-  color: #374151;
+  color: #111827;
 }
 
 .floor-badge {
   font-size: 10px;
-  color: #9CA3AF;
+  color: #6B7280;
   background: #F3F4F6;
   padding: 1px 5px;
   border-radius: 4px;
@@ -832,39 +860,36 @@ const onSendComment = async () => {
 
 .reply-action-btn {
   font-size: 12px;
-  font-weight: 600;
   color: #059669;
-  background: #ECFDF5;
-  padding: 3px 10px;
-  border-radius: 12px;
+  font-weight: 700;
 }
 
 .comment-text-box {
-  margin-left: 46px;
   margin-bottom: 8px;
+  padding-left: 46px;
 }
 
 .comment-text {
   font-size: 14px;
-  color: #1F2937;
-  line-height: 1.5;
+  color: #374151;
+  line-height: 1.6;
 }
 
 .comment-media-box {
-  margin-left: 46px;
+  padding-left: 46px;
   margin-bottom: 8px;
 }
 
 .comment-moment-img {
   width: 120px;
-  max-height: 160px;
-  border-radius: 10px;
+  height: 120px;
+  border-radius: 8px;
 }
 
 .comment-video {
   width: 180px;
   height: 120px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .sub-reply-container {
@@ -884,17 +909,17 @@ const onSendComment = async () => {
 
 .sub-author {
   font-weight: 700;
-  color: #1F2937;
+  color: #111827;
 }
 
 .sub-reply-to {
-  color: #6B7280;
+  color: #9CA3AF;
   font-size: 12px;
 }
 
 .sub-target {
-  font-weight: 600;
   color: #059669;
+  font-weight: 600;
 }
 
 .sub-colon {
@@ -902,7 +927,7 @@ const onSendComment = async () => {
 }
 
 .sub-content {
-  color: #374151;
+  color: #4B5563;
 }
 
 .empty-comments {
@@ -910,11 +935,11 @@ const onSendComment = async () => {
   flex-direction: column;
   align-items: center;
   padding: 40px 0;
-  gap: 6px;
+  gap: 8px;
 }
 
 .empty-icon {
-  font-size: 36px;
+  font-size: 32px;
 }
 
 .empty-text {
@@ -923,7 +948,7 @@ const onSendComment = async () => {
 }
 
 .bottom-spacer {
-  height: 100px;
+  height: 90px;
 }
 
 .reply-input-bar {
@@ -932,9 +957,10 @@ const onSendComment = async () => {
   left: 0;
   right: 0;
   background: #FFFFFF;
-  padding: 10px 16px 28px 16px;
+  padding: 10px 16px 24px 16px;
   border-top: 1px solid #F1F5F9;
-  z-index: 99;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+  z-index: 998;
 }
 
 .reply-target-strip {
@@ -942,7 +968,7 @@ const onSendComment = async () => {
   justify-content: space-between;
   align-items: center;
   background: #E6F4EA;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -954,38 +980,40 @@ const onSendComment = async () => {
 }
 
 .cancel-target {
-  font-size: 11px;
-  color: #6B7280;
+  font-size: 12px;
+  color: #DC2626;
 }
 
 .attach-media-preview {
   position: relative;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.attach-img {
   width: 60px;
   height: 60px;
   border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 8px;
-  background: #000;
 }
 
-.attach-img, .attach-video {
-  width: 100%;
-  height: 100%;
+.attach-video {
+  width: 90px;
+  height: 60px;
+  border-radius: 8px;
 }
 
 .remove-attach-btn {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #FFF;
-  font-size: 10px;
-  width: 16px;
-  height: 16px;
+  top: -6px;
+  right: -6px;
+  background: #DC2626;
+  color: #FFFFFF;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 18px;
+  height: 18px;
+  text-align: center;
+  line-height: 18px;
+  font-size: 11px;
 }
 
 .input-row {
@@ -996,6 +1024,7 @@ const onSendComment = async () => {
 
 .media-icon-btns {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -1008,25 +1037,26 @@ const onSendComment = async () => {
   height: 38px;
   background: #F3F4F6;
   border-radius: 19px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 14px;
   color: #111827;
 }
 
 .send-btn {
-  height: 36px;
-  border-radius: 18px;
-  background: #D1D5DB;
-  color: #FFFFFF;
+  background: #E5E7EB;
+  color: #9CA3AF;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  border-radius: 19px;
   padding: 0 16px;
-  line-height: 36px;
+  height: 38px;
+  line-height: 38px;
   border: none;
 }
 
 .send-btn.active {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 </style>
