@@ -1,9 +1,10 @@
 <template>
   <view class="mine-container">
-    <!-- 1. 顶部用户 Profile 卡片 Header (适配游客模式与已登录模式) -->
+    <!-- 1. 顶部用户 Profile 卡片 Header (微信原生授权头像与昵称) -->
     <view class="user-profile-card" :style="{ paddingTop: (statusBarHeight + 12) + 'px' }">
       <view class="user-row">
-        <!-- 微信头像一键快捷选择按钮 (已登录) 或登录唤起 (游客) -->
+        
+        <!-- 微信官方原生 chooseAvatar 选头像按钮 -->
         <button
           class="wx-avatar-btn"
           :open-type="communityState.isLoggedIn ? 'chooseAvatar' : ''"
@@ -17,15 +18,16 @@
         </button>
 
         <view class="user-info">
-          <!-- 已登录状态下的姓名与业主认证 -->
+          <!-- 已登录状态下的姓名与微信原生 nickname 快捷填入输入框 -->
           <template v-if="communityState.isLoggedIn">
             <view class="name-line">
               <input
                 type="nickname"
                 class="nickname-input"
                 v-model="inputNickname"
-                placeholder="点击设置微信昵称"
+                placeholder="点击键盘上方授权微信昵称"
                 @blur="onNicknameBlur"
+                @change="onNicknameChange"
               />
               <view class="verified-tag">
                 <text class="shield-icon">🛡️</text>
@@ -90,11 +92,24 @@
         <text class="banner-action-btn">立即登录</text>
       </view>
 
-      <!-- 我的资产与业主服务 -->
+      <!-- 业主身份与微信绑定 -->
       <view class="menu-group">
-        <text class="group-title">业主身份与微信绑定</text>
+        <text class="group-title">微信授权与身份绑定</text>
 
-        <!-- 微信手机号一键授权绑定 (getPhoneNumber 原生组件) -->
+        <!-- 1. 微信原生头像与昵称快捷设置提醒 -->
+        <view class="menu-item">
+          <view class="menu-left">
+            <text class="menu-icon">👤</text>
+            <text class="menu-label">快捷微信头像与昵称</text>
+          </view>
+          <view class="menu-right">
+            <text v-if="communityState.isLoggedIn" class="bound-phone-text">点击上方头像/昵称即刻授权</text>
+            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 2. 微信手机号一键授权绑定 (getPhoneNumber 原生组件) -->
         <view class="menu-item">
           <view class="menu-left">
             <text class="menu-icon">📱</text>
@@ -121,17 +136,25 @@
           </view>
         </view>
 
-        <!-- 新增：微信 getUserProfile 扩展资料一键同步项 -->
+        <!-- 3. 微信 getUserProfile 扩展资料授权 -->
         <view class="menu-item" @click="onCallGetUserProfile">
           <view class="menu-left">
             <text class="menu-icon">🌐</text>
-            <text class="menu-label">微信 getUserProfile 资料</text>
+            <text class="menu-label">微信 getUserProfile 地区</text>
           </view>
           <view class="menu-right">
             <text v-if="communityState.isLoggedIn" class="bound-phone-text">{{ communityState.currentUser.city || '点击同步' }}</text>
             <text v-else class="menu-sub-tip">未登录</text>
             <text class="arrow">›</text>
           </view>
+        </view>
+      </view>
+
+      <!-- 4. 商业化增值/高级功能入口 -->
+      <view class="menu-group">
+        <view class="group-header-row">
+          <text class="group-title">社区服务与档案</text>
+          <text class="paid-feature-tag">业主专属</text>
         </view>
 
         <view class="menu-item" @click="onNavToProperty">
@@ -153,36 +176,6 @@
           <view class="menu-right">
             <text v-if="communityState.isLoggedIn" class="unread-badge">2 条未读</text>
             <text v-else class="menu-sub-tip">未登录</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 4. 商业化增值/高级功能入口 -->
-      <view class="menu-group">
-        <view class="group-header-row">
-          <text class="group-title">社区增值服务 (增值拓展预留)</text>
-          <text class="paid-feature-tag">支持定制接口</text>
-        </view>
-
-        <view class="menu-item" @click="onFeatureReserved('蓝牙门禁一键开门')">
-          <view class="menu-left">
-            <text class="menu-icon">🔑</text>
-            <text class="menu-label">蓝牙门禁一键开锁 / 访客密码</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">对接物业门禁</text>
-            <text class="arrow">›</text>
-          </view>
-        </view>
-
-        <view class="menu-item" @click="onFeatureReserved('在线物业费缴纳')">
-          <view class="menu-left">
-            <text class="menu-icon">💰</text>
-            <text class="menu-label">在线物业费 / 车位费缴纳</text>
-          </view>
-          <view class="menu-right">
-            <text class="menu-sub-tip">自动开具发票</text>
             <text class="arrow">›</text>
           </view>
         </view>
@@ -234,17 +227,38 @@ onMounted(() => {
   inputNickname.value = communityStore.currentUser.nickname || '微信用户'
 })
 
-// 微信快捷选头像
+// 1. 微信原生选择头像回调 (@chooseavatar)
 const onChooseWxAvatar = (e) => {
+  console.log('📷 [微信原生 chooseAvatar 回调]:', e)
   if (e.detail && e.detail.avatarUrl) {
-    communityStore.syncWxProfile(null, e.detail.avatarUrl)
-    uni.showToast({ title: '已同步微信头像', icon: 'success' })
+    const newAvatar = e.detail.avatarUrl
+    console.log('🎉 授权拿到的微信头像临时路径:', newAvatar)
+    communityStore.syncWxProfile(null, newAvatar)
+    uni.showToast({ title: '微信头像授权设置成功！', icon: 'success' })
   }
 }
 
-// 微信快捷手机号授权回调处理
+// 2. 微信原生快捷填昵称回调 (@blur / @change)
+const onNicknameBlur = (e) => {
+  const val = e.detail.value || inputNickname.value
+  console.log('🏷️ [微信原生 nickname 输入框失去焦点/失焦填入]:', val)
+  if (val && val !== communityStore.currentUser.nickname) {
+    communityStore.syncWxProfile(val, null)
+    uni.showToast({ title: `微信昵称已同步: ${val}`, icon: 'success' })
+  }
+}
+
+const onNicknameChange = (e) => {
+  const val = e.detail.value
+  console.log('🏷️ [微信原生 nickname 值改变]:', val)
+  if (val) {
+    communityStore.syncWxProfile(val, null)
+  }
+}
+
+// 3. 微信原生 getPhoneNumber 手机号回调
 const onGetPhoneNumber = async (e) => {
-  console.log('微信 getPhoneNumber 回调原生参数:', e)
+  console.log('📱 [微信原生 getPhoneNumber 回调]:', e)
   uni.showLoading({ title: '安全绑定中...' })
 
   let phoneStr = ''
@@ -264,7 +278,7 @@ const onGetPhoneNumber = async (e) => {
   uni.showToast({ title: `微信手机号 ${boundPhone} 绑定成功！`, icon: 'success' })
 }
 
-// 调起微信原生 getUserProfile 获取其他扩展信息
+// 4. 微信原生 getUserProfile 授权
 const onCallGetUserProfile = async () => {
   if (!communityState.isLoggedIn) {
     onTriggerLogin()
@@ -274,23 +288,15 @@ const onCallGetUserProfile = async () => {
   const res = await communityStore.fetchUserProfile()
   uni.hideLoading()
   if (res) {
-    uni.showToast({ title: '微信资料及归属地已同步！', icon: 'success' })
+    uni.showToast({ title: '微信地区与资料已授权同步！', icon: 'success' })
   } else {
-    uni.showToast({ title: '根据微信最新政策，请在上方直接选头像和填昵称', icon: 'none' })
+    uni.showToast({ title: '请直接点击上方头像与昵称进行授权设置', icon: 'none' })
   }
 }
 
 const onAvatarClick = () => {
   if (!communityState.isLoggedIn) {
     onTriggerLogin()
-  }
-}
-
-const onNicknameBlur = (e) => {
-  const val = e.detail.value || inputNickname.value
-  if (val) {
-    communityStore.syncWxProfile(val, null)
-    uni.showToast({ title: '已同步微信昵称', icon: 'success' })
   }
 }
 
@@ -358,18 +364,6 @@ const onNavToNotice = () => {
   uni.showModal({
     title: '🔔 消息通知中心',
     content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区服务中心成立通知',
-    showCancel: false
-  })
-}
-
-const onFeatureReserved = (featureName) => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
-  uni.showModal({
-    title: `⚙️ ${featureName}`,
-    content: `【${featureName}】为辅助功能，可随时对接物业门禁与缴费系统！`,
     showCancel: false
   })
 }
@@ -454,11 +448,14 @@ const onFeatureReserved = (featureName) => {
 }
 
 .nickname-input {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: #FFFFFF;
-  width: 110px;
+  width: 140px;
   height: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0 8px;
+  border-radius: 6px;
 }
 
 .guest-name {
