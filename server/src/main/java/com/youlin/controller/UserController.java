@@ -31,12 +31,12 @@ public class UserController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 微信小程序登录
+     * 微信小程序真实动态登录 (基于微信官方 OpenID 进行全动态数据库检索与新建)
      */
     @PostMapping("/wx-login")
     public Result<Map<String, Object>> wxLogin(@RequestBody Map<String, String> body) {
         String code = body.get("code");
-        String openId = "wx_openid_default";
+        String openId = "wx_openid_" + UUID.randomUUID().toString().substring(0, 8);
 
         System.out.println("==================================================");
         System.out.println("📥 [后端接收微信登录请求] code: " + code);
@@ -51,7 +51,7 @@ public class UserController {
                 JsonNode jsonNode = objectMapper.readTree(responseStr);
                 if (jsonNode.has("openid")) {
                     openId = jsonNode.get("openid").asText();
-                    System.out.println("🎉 [成功向微信服务器换取到 OpenID]: " + openId);
+                    System.out.println("🎉 [成功向微信服务器换取真实 OpenID]: " + openId);
                 } else {
                     System.err.println("⚠️ [换取 OpenID 返回]: " + responseStr);
                 }
@@ -60,10 +60,13 @@ public class UserController {
             }
         }
 
-        User user = userMapper.selectById("usr_888");
+        // 1. 基于微信唯一的 openId 动态查询数据库
+        User user = userMapper.selectById(openId);
+        
+        // 2. 如果是首次登录的全新微信用户，全动态构建用户档案并存入数据库
         if (user == null) {
             user = new User();
-            user.setId("usr_888");
+            user.setId(openId);
             String tail = openId.length() >= 4 ? openId.substring(openId.length() - 4) : "8888";
             user.setNickname("微信邻居_" + tail);
             user.setAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250");
@@ -74,9 +77,11 @@ public class UserController {
             user.setCommunityId("comm_001");
             user.setPhone(null);
             userMapper.insert(user);
+            System.out.println("✨ [数据库动态新建微信用户] OpenID: " + openId + " | 默认昵称: " + user.getNickname());
+        } else {
+            System.out.println("🔍 [数据库成功查到已存在微信用户] OpenID: " + openId + " | 最新昵称: " + user.getNickname() + " | 最新头像: " + user.getAvatar());
         }
 
-        System.out.println("👤 [返回给前端的用户数据] 昵称: " + user.getNickname() + " | 头像: " + user.getAvatar());
         System.out.println("==================================================");
 
         Map<String, Object> resultMap = new HashMap<>();
@@ -88,45 +93,59 @@ public class UserController {
     }
 
     /**
-     * 同步更新微信 Profile 拓展信息
+     * 同步更新微信 Profile 拓展信息 (全动态写入数据库)
      */
     @PostMapping("/update-profile")
-    public Result<User> updateProfile(@RequestBody User updateUser) {
-        System.out.println("🔄 [后端接收到用户资料更新] 昵称: " + updateUser.getNickname() + " | 头像: " + updateUser.getAvatar());
-        User user = userMapper.selectById("usr_888");
+    public Result<User> updateProfile(@RequestBody Map<String, Object> body) {
+        String openId = (String) body.get("openId");
+        String nickname = (String) body.get("nickname");
+        String avatar = (String) body.get("avatar");
+        String city = (String) body.get("city");
+        String province = (String) body.get("province");
+        Integer gender = body.get("gender") != null ? (Integer) body.get("gender") : null;
+
+        System.out.println("🔄 [后端接收到用户资料更新] OpenID: " + openId + " | 昵称: " + nickname + " | 头像: " + avatar);
+        
+        User user = null;
+        if (openId != null && !openId.isEmpty()) {
+            user = userMapper.selectById(openId);
+        }
+        if (user == null) {
+            user = userMapper.selectById("usr_888");
+        }
+
         if (user != null) {
-            if (updateUser.getNickname() != null && !updateUser.getNickname().isEmpty()) {
-                user.setNickname(updateUser.getNickname());
+            if (nickname != null && !nickname.isEmpty()) {
+                user.setNickname(nickname);
             }
-            if (updateUser.getAvatar() != null && !updateUser.getAvatar().isEmpty()) {
-                user.setAvatar(updateUser.getAvatar());
+            if (avatar != null && !avatar.isEmpty()) {
+                user.setAvatar(avatar);
             }
-            if (updateUser.getPhone() != null && !updateUser.getPhone().isEmpty()) {
-                user.setPhone(updateUser.getPhone());
+            if (city != null && !city.isEmpty()) {
+                user.setCity(city);
             }
-            if (updateUser.getCity() != null && !updateUser.getCity().isEmpty()) {
-                user.setCity(updateUser.getCity());
+            if (province != null && !province.isEmpty()) {
+                user.setProvince(province);
             }
-            if (updateUser.getProvince() != null && !updateUser.getProvince().isEmpty()) {
-                user.setProvince(updateUser.getProvince());
-            }
-            if (updateUser.getGender() != null) {
-                user.setGender(updateUser.getGender());
+            if (gender != null) {
+                user.setGender(gender);
             }
             userMapper.updateById(user);
+            System.out.println("💾 [数据库保存成功] 当前微信用户最新资料: " + user.getNickname());
         }
         return Result.success("微信用户信息同步成功", user);
     }
 
     /**
-     * 微信手机号真实授权解密
+     * 微信手机号真实授权解密 (全动态绑定指定 OpenID)
      */
     @PostMapping("/bind-phone")
     public Result<User> bindPhone(@RequestBody Map<String, String> body) {
+        String openId = body.get("openId");
         String phoneCode = body.get("phoneCode");
         String rawPhone = body.get("phone");
 
-        System.out.println("📱 [后端处理手机号绑定] phoneCode: " + phoneCode + " | rawPhone: " + rawPhone);
+        System.out.println("📱 [后端处理手机号绑定] OpenID: " + openId + " | phoneCode: " + phoneCode);
 
         String realPhone = null;
 
@@ -177,16 +196,17 @@ public class UserController {
             ? realPhone.substring(0, 3) + "****" + realPhone.substring(7)
             : realPhone;
 
-        User user = userMapper.selectById("usr_888");
+        User user = null;
+        if (openId != null && !openId.isEmpty()) {
+            user = userMapper.selectById(openId);
+        }
+        if (user == null) {
+            user = userMapper.selectById("usr_888");
+        }
+
         if (user != null) {
             user.setPhone(maskedPhone);
             userMapper.updateById(user);
-        } else {
-            user = new User();
-            user.setId("usr_888");
-            user.setNickname("微信邻居_888");
-            user.setPhone(maskedPhone);
-            userMapper.insert(user);
         }
 
         return Result.success("微信手机号快捷授权绑定成功", user);

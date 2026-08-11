@@ -12,8 +12,9 @@ export const state = reactive({
     building: '1期'
   },
   currentUser: {
-    id: 'usr_guest',
-    nickname: hasLoggedInStorage ? (uni.getStorageSync('userName') || '微信用户_8888') : '未登录游客',
+    id: uni.getStorageSync('userOpenId') || 'usr_guest',
+    openId: uni.getStorageSync('userOpenId') || '',
+    nickname: hasLoggedInStorage ? (uni.getStorageSync('userName') || '微信用户') : '未登录游客',
     avatar: hasLoggedInStorage ? (uni.getStorageSync('userAvatar') || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250') : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
     building: hasLoggedInStorage ? '5栋' : '未绑定门牌',
     room: hasLoggedInStorage ? '302' : '',
@@ -39,12 +40,19 @@ export const state = reactive({
 })
 
 export const useCommunityStore = () => {
-  const setSuccessState = (token = '', userInfo = null) => {
+  const setSuccessState = (token = '', userInfo = null, openId = '') => {
     state.isLoggedIn = true
     state.showLoginModal = false
     if (token) {
       state.userToken = token
       uni.setStorageSync('userToken', token)
+    }
+
+    if (openId || (userInfo && userInfo.id)) {
+      const realOpenId = openId || userInfo.id
+      state.currentUser.id = realOpenId
+      state.currentUser.openId = realOpenId
+      uni.setStorageSync('userOpenId', realOpenId)
     }
 
     const defaultNickname = '微信邻居_' + Math.floor(1000 + Math.random() * 9000)
@@ -59,11 +67,10 @@ export const useCommunityStore = () => {
 
     console.log('==================================================')
     console.log('✅ [前端 Store 日志] 用户登录与名片状态构建完成:')
-    console.log('👤 [用户 ID]:', state.currentUser.id)
+    console.log('👤 [真实 OpenID]:', state.currentUser.openId)
     console.log('🏷️ [微信昵称]:', state.currentUser.nickname)
     console.log('🖼️ [微信头像]:', state.currentUser.avatar)
     console.log('📱 [绑定的手机号]:', state.currentUser.phone || '未绑定')
-    console.log('🔑 [Token 凭证]:', state.userToken)
     console.log('==================================================')
 
     uni.setStorageSync('hasLoggedIn', true)
@@ -86,7 +93,7 @@ export const useCommunityStore = () => {
             const loginRes = await apiWxLogin(res.code)
             console.log('📡 [后端响应登录数据]:', JSON.stringify(loginRes))
             if (loginRes) {
-              setSuccessState(loginRes.token, loginRes.userInfo)
+              setSuccessState(loginRes.token, loginRes.userInfo, loginRes.openId)
             } else {
               setSuccessState()
             }
@@ -145,6 +152,7 @@ export const useCommunityStore = () => {
             uni.setStorageSync('userCity', state.currentUser.city)
 
             await apiUpdateProfile({
+              openId: state.currentUser.openId,
               nickname: state.currentUser.nickname,
               avatar: state.currentUser.avatar,
               city: info.city,
@@ -198,6 +206,8 @@ export const useCommunityStore = () => {
   const clearLoginState = () => {
     uni.clearStorageSync()
     state.isLoggedIn = false
+    state.currentUser.openId = ''
+    state.currentUser.id = 'usr_guest'
     state.currentUser.nickname = '未登录游客'
     state.currentUser.avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
     state.currentUser.phone = ''
@@ -220,6 +230,7 @@ export const useCommunityStore = () => {
 
     try {
       await apiUpdateProfile({
+        openId: state.currentUser.openId,
         nickname: state.currentUser.nickname,
         avatar: state.currentUser.avatar
       })
