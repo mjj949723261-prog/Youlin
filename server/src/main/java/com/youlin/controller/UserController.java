@@ -38,6 +38,9 @@ public class UserController {
         String code = body.get("code");
         String openId = "wx_openid_default";
 
+        System.out.println("==================================================");
+        System.out.println("📥 [后端接收微信登录请求] code: " + code);
+
         if (code != null && !code.isEmpty()) {
             try {
                 String url = String.format(
@@ -48,12 +51,12 @@ public class UserController {
                 JsonNode jsonNode = objectMapper.readTree(responseStr);
                 if (jsonNode.has("openid")) {
                     openId = jsonNode.get("openid").asText();
-                    System.out.println("成功换取微信 OpenID: " + openId);
+                    System.out.println("🎉 [成功向微信服务器换取到 OpenID]: " + openId);
                 } else {
-                    System.err.println("换取 OpenID 返回: " + responseStr);
+                    System.err.println("⚠️ [换取 OpenID 返回]: " + responseStr);
                 }
             } catch (Exception e) {
-                System.err.println("调用微信 jscode2session 异常: " + e.getMessage());
+                System.err.println("❌ [调用微信 jscode2session 异常]: " + e.getMessage());
             }
         }
 
@@ -73,6 +76,9 @@ public class UserController {
             userMapper.insert(user);
         }
 
+        System.out.println("👤 [返回给前端的用户数据] 昵称: " + user.getNickname() + " | 头像: " + user.getAvatar());
+        System.out.println("==================================================");
+
         Map<String, Object> resultMap = new HashMap<>();
         resultMap.put("token", "youlin_jwt_token_" + UUID.randomUUID().toString().replaceAll("-", ""));
         resultMap.put("openId", openId);
@@ -86,6 +92,7 @@ public class UserController {
      */
     @PostMapping("/update-profile")
     public Result<User> updateProfile(@RequestBody User updateUser) {
+        System.out.println("🔄 [后端接收到用户资料更新] 昵称: " + updateUser.getNickname() + " | 头像: " + updateUser.getAvatar());
         User user = userMapper.selectById("usr_888");
         if (user != null) {
             if (updateUser.getNickname() != null && !updateUser.getNickname().isEmpty()) {
@@ -119,6 +126,8 @@ public class UserController {
         String phoneCode = body.get("phoneCode");
         String rawPhone = body.get("phone");
 
+        System.out.println("📱 [后端处理手机号绑定] phoneCode: " + phoneCode + " | rawPhone: " + rawPhone);
+
         String realPhone = null;
 
         if (rawPhone != null && rawPhone.matches("^1[3-9]\\d{9}$")) {
@@ -142,7 +151,7 @@ public class UserController {
                     reqBody.put("code", phoneCode);
 
                     String phoneRes = restTemplate.postForObject(phoneUrl, reqBody, String.class);
-                    System.out.println("微信手机号 API 解密返回结果: " + phoneRes);
+                    System.out.println("📡 [微信官方 getuserphonenumber 返回结果]: " + phoneRes);
 
                     JsonNode phoneJson = objectMapper.readTree(phoneRes);
                     if (phoneJson.has("errcode") && phoneJson.get("errcode").asInt() == 0) {
@@ -152,11 +161,11 @@ public class UserController {
                             System.out.println("🎉 成功解密到用户微信真实绑定手机号: " + realPhone);
                         }
                     } else {
-                        System.err.println("微信官方 API 未返回手机号: " + phoneRes);
+                        System.err.println("⚠️ 微信官方 API 未返回手机号: " + phoneRes);
                     }
                 }
             } catch (Exception e) {
-                System.err.println("调用微信手机号解密接口异常: " + e.getMessage());
+                System.err.println("❌ 调用微信手机号解密接口异常: " + e.getMessage());
             }
         }
 
