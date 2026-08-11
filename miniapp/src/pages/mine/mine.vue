@@ -62,7 +62,7 @@
     <scroll-view scroll-y class="mine-scroll-body">
       
       <view class="menu-group">
-        <!-- 1. 绑定手机号 (放在用户认证上方，点击直接调起微信原生获取当前微信手机号) -->
+        <!-- 1. 绑定手机号 (只有用户亲自主动点击后，才唤起微信官方原生获取手机号弹窗) -->
         <view class="menu-item">
           <view class="menu-left">
             <text class="menu-icon">📱</text>
@@ -208,9 +208,9 @@ const getRoleBadgeClass = (roleCode) => {
   return 'badge-owner'
 }
 
-// 微信原生 getPhoneNumber 回调：直接获取并绑定当前微信真实手机号！
+// 微信原生 getPhoneNumber 回调：用户主动点击按钮后，才拉起微信官方授权弹出！
 const onGetPhoneNumber = async (e) => {
-  console.log('✅ [微信原生 getPhoneNumber 事件触发]:', e)
+  console.log('✅ [用户主动点击获取手机号]:', e)
   uni.showLoading({ title: '获取手机号中...' })
   let phoneStr = ''
   let phoneCode = ''
@@ -248,7 +248,7 @@ const onNavToFavorite = () => {
   }
   uni.showModal({
     title: '⭐ 我的收藏夹',
-    content: '1. 社区服务中心关于成立业委会通知\n2. 5栋邻居张先生【求助找猫】\n3. 闲置电梯卡转查',
+    content: '1. 社区服务中心关于成立业委会通知\n2. 5栋邻居张先生【求助找猫】\n3. 闲置电梯卡转让',
     showCancel: false
   })
 }
@@ -275,7 +275,7 @@ const onOpenSettings = () => {
 
   uni.showActionSheet({
     itemList: [
-      '✏️ 重新弹框完善微信资料',
+      '✏️ 修改微信头像与昵称 (重新弹框)',
       '📷 修改微信头像 (chooseAvatar)',
       '🏷️ 修改微信昵称 (nickname)',
       '📱 关联微信手机号',
@@ -337,14 +337,14 @@ const onCallGetUserProfile = async () => {
   if (res) uni.showToast({ title: '微信资料已授权！', icon: 'success' })
 }
 
-// 核心登录逻辑：点击一键授权登录，成功后【重新弹框】引导完善微信个人资料！
+// 核心登录逻辑：每次点击【去登录】都直接授权登录，并且 100% 重新触发 UserProfileModal 资料弹窗！
 const onTriggerLogin = async () => {
   uni.showLoading({ title: '微信安全授权登录中...' })
   const success = await communityStore.loginWithWxCode()
   uni.hideLoading()
   if (success) {
     fetchUserStats()
-    // 登录成功后重新弹框引导设置微信头像与昵称！
+    // 每次授权登录，100% 弹出资料修改弹窗！
     isProfileModalVisible.value = true
   } else {
     uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
@@ -358,10 +358,13 @@ const onProfileSaved = () => {
 const onResetLogin = () => {
   uni.showModal({
     title: '🚪 退出登录确认',
-    content: '确定要退出当前微信账号并返回游客模式吗？',
+    content: '确定要退出当前微信账号并清空本地登录状态吗？',
     confirmColor: '#DC2626',
     success: (res) => {
       if (res.confirm) {
+        try {
+          uni.clearStorageSync()
+        } catch (e) {}
         communityStore.clearLoginState()
         stats.value = { postCount: 0, replyCount: 0 }
       }
