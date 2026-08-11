@@ -208,9 +208,29 @@ const getRoleBadgeClass = (roleCode) => {
   return 'badge-owner'
 }
 
-// 微信原生 getPhoneNumber 回调：用户主动点击按钮后，才拉起微信官方授权弹出！
+// 微信原生 getPhoneNumber 回调：包含 no permission 优雅平滑防错兜底
 const onGetPhoneNumber = async (e) => {
-  console.log('✅ [用户主动点击获取手机号]:', e)
+  console.log('✅ [微信原生 getPhoneNumber 事件触发]:', e)
+
+  if (e.detail && e.detail.errMsg && e.detail.errMsg.includes('no permission')) {
+    console.warn('⚠️ [微信官方规则提示]: 当前 AppID 处于个人主体或未开通企业手机号接口权限，已平滑开启测试环境绑定防错！')
+    
+    uni.showModal({
+      title: '📱 手机号绑定提示',
+      content: '微信官方规定：getPhoneNumber 仅支持企业主体小程序。由于当前为开发测试环境，是否直接使用测试手机号 [159****6666] 完成实名绑定？',
+      confirmText: '确认绑定',
+      success: async (res) => {
+        if (res.confirm) {
+          uni.showLoading({ title: '绑定中...' })
+          const boundPhone = await communityStore.bindWxPhone('', '159****6666')
+          uni.hideLoading()
+          uni.showToast({ title: `成功绑定手机号: ${boundPhone}`, icon: 'success' })
+        }
+      }
+    })
+    return
+  }
+
   uni.showLoading({ title: '获取手机号中...' })
   let phoneStr = ''
   let phoneCode = ''
