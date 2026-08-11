@@ -31,7 +31,7 @@ public class UserController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 微信小程序登录 (调用微信 jscode2session 换取真实 openid)
+     * 微信小程序登录 (调用微信 jscode2session 换取真实 openid，同时自动生成微信专属名片与昵称)
      */
     @PostMapping("/wx-login")
     public Result<Map<String, Object>> wxLogin(@RequestBody Map<String, String> body) {
@@ -61,17 +61,15 @@ public class UserController {
         if (user == null) {
             user = new User();
             user.setId("usr_888");
-            user.setNickname("微信用户");
-            user.setAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250");
+            String tail = openId.length() >= 4 ? openId.substring(openId.length() - 4) : "8888";
+            user.setNickname("微信邻居_" + tail);
+            user.setAvatar("https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132");
             user.setBuilding("5栋");
             user.setRoom("302");
             user.setIsOwner(true);
             user.setRoleTag("本小区住户");
             user.setCommunityId("comm_001");
             user.setPhone(null);
-            user.setCity("深圳");
-            user.setProvince("广东");
-            user.setGender(1);
             userMapper.insert(user);
         }
 
@@ -84,7 +82,7 @@ public class UserController {
     }
 
     /**
-     * 同步更新微信 Profile 拓展信息 (含 getUserProfile 的 city, province, gender)
+     * 同步更新微信 Profile 拓展信息
      */
     @PostMapping("/update-profile")
     public Result<User> updateProfile(@RequestBody User updateUser) {
@@ -177,7 +175,7 @@ public class UserController {
         } else {
             user = new User();
             user.setId("usr_888");
-            user.setNickname("微信用户");
+            user.setNickname("微信邻居_888");
             user.setPhone(maskedPhone);
             userMapper.insert(user);
         }
