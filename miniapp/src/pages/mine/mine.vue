@@ -15,12 +15,11 @@
             <view class="name-line">
               <text class="user-name-text">{{ communityState.currentUser.nickname }}</text>
             </view>
-            <!-- 第二行：展示 7 大角色 Tag 勋章 -->
+            <!-- 第二行：纯粹干练的 7 大角色 Tag 勋章（无图标、无点击提示文本） -->
             <view class="property-line">
               <view class="role-badge-tag" :class="getRoleBadgeClass(communityState.currentUser.roleCode)">
                 <text class="role-badge-text">{{ getRoleBadgeText(communityState.currentUser) }}</text>
               </view>
-              <text class="setting-hint-text">（点击进入设置）</text>
             </view>
           </view>
         </template>
@@ -150,16 +149,16 @@ onShow(() => {
   fetchUserStats()
 })
 
-// 解析 7 大角色的标准中文 Tag（规范统一）
+// 解析 7 大角色的干练纯中文 Tag（不带任何图标）
 const getRoleBadgeText = (user) => {
   const code = user.roleCode
-  if (code === 'COMMUNITY_ADMIN') return '🛡️ 社区管理员'
-  if (code === 'COMMITTEE_ADMIN') return '🏛️ 业委会代表'
-  if (code === 'PROPERTY_STAFF') return '🏢 物业人员'
-  if (code === 'MERCHANT') return '🏪 商户'
-  if (code === 'TENANT') return '🔑 租客'
-  if (code === 'GUEST') return '👤 游客'
-  return '🏠 业主'
+  if (code === 'COMMUNITY_ADMIN') return '社区管理员'
+  if (code === 'COMMITTEE_ADMIN') return '业委会代表'
+  if (code === 'PROPERTY_STAFF') return '物业人员'
+  if (code === 'MERCHANT') return '商户'
+  if (code === 'TENANT') return '租客'
+  if (code === 'GUEST') return '游客'
+  return '业主'
 }
 
 // 解析 7 大角色的专属 Badge 样式类
@@ -255,13 +254,13 @@ const onOpenSettings = () => {
 const onSwitchRoleDialog = () => {
   uni.showActionSheet({
     itemList: [
-      '🛡️ 社区管理员',
-      '🏛️ 业委会代表',
-      '🏠 业主',
-      '🏢 物业人员',
-      '🏪 商户',
-      '🔑 租客',
-      '👤 游客'
+      '社区管理员',
+      '业委会代表',
+      '业主',
+      '物业人员',
+      '商户',
+      '租客',
+      '游客'
     ],
     success: (res) => {
       const roles = ['COMMUNITY_ADMIN', 'COMMITTEE_ADMIN', 'OWNER', 'PROPERTY_STAFF', 'MERCHANT', 'TENANT', 'GUEST']
@@ -379,7 +378,6 @@ const onNavToMyPosts = () => {
 .property-line {
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .role-badge-tag {
@@ -404,11 +402,6 @@ const onNavToMyPosts = () => {
 .badge-tenant { background: rgba(16, 185, 129, 0.5); }
 .badge-guest { background: rgba(107, 114, 128, 0.5); }
 .badge-owner { background: rgba(255, 255, 255, 0.25); }
-
-.setting-hint-text {
-  font-size: 11px;
-  color: #A7F3D0;
-}
 
 .guest-title-text {
   font-size: 20px;
