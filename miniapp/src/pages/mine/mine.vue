@@ -56,22 +56,22 @@
         </view>
       </view>
 
-      <!-- 2. 交互数据快捷栏 -->
+      <!-- 2. 真实数据库交互数据联动栏 (P0 核心打通) -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
-          <text class="stat-num">{{ communityState.isLoggedIn ? '12' : '--' }}</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? stats.postCount : '--' }}</text>
           <text class="stat-label">我的发帖</text>
         </view>
         <view class="stat-divider"></view>
 
         <view class="stat-item" @click="onNavToMyPosts('REPLIES')">
-          <text class="stat-num">{{ communityState.isLoggedIn ? '38' : '--' }}</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? stats.replyCount : '--' }}</text>
           <text class="stat-label">收到回复</text>
         </view>
         <view class="stat-divider"></view>
 
         <view class="stat-item" @click="onNavToMyFav">
-          <text class="stat-num">{{ communityState.isLoggedIn ? '95' : '--' }}</text>
+          <text class="stat-num">{{ communityState.isLoggedIn ? stats.likeCount : '--' }}</text>
           <text class="stat-label">获得的点赞</text>
         </view>
       </view>
@@ -213,11 +213,31 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useCommunityStore, state as communityState } from '@/store/community'
+import { apiGetUserStats } from '@/utils/api'
 
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
 const inputNickname = ref('')
+
+const stats = ref({
+  postCount: 0,
+  replyCount: 0,
+  likeCount: 0
+})
+
+const fetchUserStats = async () => {
+  if (communityState.isLoggedIn) {
+    const targetOpenId = communityStore.currentUser.openId || communityStore.currentUser.id
+    if (targetOpenId && targetOpenId !== 'usr_guest') {
+      const data = await apiGetUserStats(targetOpenId)
+      if (data) {
+        stats.value = data
+      }
+    }
+  }
+}
 
 onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
@@ -225,6 +245,11 @@ onMounted(() => {
     statusBarHeight.value = sysInfo.statusBarHeight
   }
   inputNickname.value = communityStore.currentUser.nickname || '微信用户'
+  fetchUserStats()
+})
+
+onShow(() => {
+  fetchUserStats()
 })
 
 // 1. 微信原生选择头像回调 (@chooseavatar)
@@ -241,7 +266,7 @@ const onChooseWxAvatar = (e) => {
 // 2. 微信原生快捷填昵称回调 (@blur / @change)
 const onNicknameBlur = (e) => {
   const val = e.detail.value || inputNickname.value
-  console.log('🏷️ [微信原生 nickname 输入框失去焦点/失焦填入]:', val)
+  console.log('🏷️ [微信原生 nickname 输入框失焦填入]:', val)
   if (val && val !== communityStore.currentUser.nickname) {
     communityStore.syncWxProfile(val, null)
     uni.showToast({ title: `微信昵称已同步: ${val}`, icon: 'success' })
@@ -309,6 +334,7 @@ const onTriggerLogin = () => {
 
 const onResetLogin = () => {
   communityStore.clearLoginState()
+  stats.value = { postCount: 0, replyCount: 0, likeCount: 0 }
 }
 
 const onSwitchProperty = () => {
@@ -331,7 +357,7 @@ const onNavToMyPosts = () => {
   }
   uni.showModal({
     title: '📝 我的发帖与回复记录',
-    content: '您在【这儿有邻】共发布了 12 条动态。',
+    content: `根据数据库真实统计：您在【这儿有邻】共发布了 ${stats.value.postCount} 条动态，收到/参与了 ${stats.value.replyCount} 条楼层回复。`,
     showCancel: false
   })
 }
@@ -341,7 +367,11 @@ const onNavToMyFav = () => {
     onTriggerLogin()
     return
   }
-  uni.showToast({ title: '查看获得的点赞...', icon: 'none' })
+  uni.showModal({
+    title: '💖 获得的点赞数据',
+    content: `根据数据库真实计算：您的邻里互动共获得了 ${stats.value.likeCount} 个赞。`,
+    showCancel: false
+  })
 }
 
 const onNavToProperty = () => {

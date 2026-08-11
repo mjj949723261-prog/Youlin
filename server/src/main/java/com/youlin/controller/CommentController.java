@@ -3,7 +3,9 @@ package com.youlin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.youlin.common.Result;
 import com.youlin.entity.Comment;
+import com.youlin.entity.User;
 import com.youlin.mapper.CommentMapper;
+import com.youlin.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,9 @@ public class CommentController {
 
     @Autowired
     private CommentMapper commentMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @GetMapping("/posts/{postId}/comments")
     public Result<List<Comment>> getPostComments(@PathVariable Long postId) {
@@ -49,8 +54,23 @@ public class CommentController {
             return Result.error(400, "回复内容或附件媒体不能为空");
         }
 
+        if (StringUtils.hasText(comment.getAuthorId())) {
+            User user = userMapper.selectById(comment.getAuthorId());
+            if (user != null) {
+                if (!StringUtils.hasText(comment.getAuthorName())) {
+                    comment.setAuthorName(user.getNickname());
+                }
+                if (!StringUtils.hasText(comment.getAuthorAvatar())) {
+                    comment.setAuthorAvatar(user.getAvatar());
+                }
+            }
+        }
+
         if (!StringUtils.hasText(comment.getAuthorName())) {
-            comment.setAuthorName("我 (李先生)");
+            comment.setAuthorName("社区居民");
+        }
+        if (!StringUtils.hasText(comment.getAuthorAvatar())) {
+            comment.setAuthorAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250");
         }
         if (!StringUtils.hasText(comment.getPublishTime())) {
             comment.setPublishTime("刚刚");
@@ -65,7 +85,7 @@ public class CommentController {
         }
 
         commentMapper.insert(comment);
+        System.out.println("💬 [数据库成功写入评论回复] 帖子ID: " + comment.getPostId() + " | 回复人: " + comment.getAuthorName() + " | 内容: " + comment.getContent());
         return Result.success("回复成功！", comment);
     }
-
 }

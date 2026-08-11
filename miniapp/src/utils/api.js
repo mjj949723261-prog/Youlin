@@ -33,6 +33,11 @@ export const apiWxLogin = (code) => {
   return request('/user/wx-login', 'POST', { code })
 }
 
+// 获取用户发帖数/回复数/获赞数真实统计
+export const apiGetUserStats = (openId) => {
+  return request(`/user/stats?openId=${openId}`, 'GET')
+}
+
 // 更新用户微信 Profile 扩展资料 (附带 openId 传输)
 export const apiUpdateProfile = (profileData) => {
   return request('/user/update-profile', 'POST', {
@@ -62,17 +67,28 @@ export const apiGetPostDetail = (id) => {
 
 // 发布新帖子
 export const apiCreatePost = (postData) => {
-  return request('/posts', 'POST', postData)
+  return request('/posts', 'POST', {
+    authorId: state.currentUser.openId || state.currentUser.id,
+    authorName: state.currentUser.nickname,
+    authorAvatar: state.currentUser.avatar,
+    building: state.currentUser.building ? `${state.currentUser.building} ${state.currentUser.room || ''}` : '5栋 302',
+    ...postData
+  })
 }
 
 // 获取评论列表
 export const apiGetComments = (postId) => {
-  return request(`/comments?postId=${postId}`, 'GET')
+  return request(`/posts/${postId}/comments`, 'GET')
 }
 
 // 发表评论回复
 export const apiCreateComment = (commentData) => {
-  return request('/comments', 'POST', commentData)
+  return request('/comments', 'POST', {
+    authorId: state.currentUser.openId || state.currentUser.id,
+    authorName: state.currentUser.nickname,
+    authorAvatar: state.currentUser.avatar,
+    ...commentData
+  })
 }
 
 export const apiAddComment = apiCreateComment

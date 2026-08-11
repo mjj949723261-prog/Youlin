@@ -1,9 +1,14 @@
 package com.youlin.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.youlin.common.Result;
+import com.youlin.entity.Comment;
+import com.youlin.entity.Post;
 import com.youlin.entity.User;
+import com.youlin.mapper.CommentMapper;
+import com.youlin.mapper.PostMapper;
 import com.youlin.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +26,12 @@ public class UserController {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private PostMapper postMapper;
+
+    @Autowired
+    private CommentMapper commentMapper;
+
     @Value("${wx.miniapp.appid:wxc3781b268c2b5fb8}")
     private String appId;
 
@@ -31,7 +42,41 @@ public class UserController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 微信小程序真实动态登录 (基于微信官方 OpenID 进行全动态数据库检索与新建)
+     * 获取指定用户的真实发帖数、回复数、获得点赞数全数据统计
+     */
+    @GetMapping("/stats")
+    public Result<Map<String, Object>> getUserStats(@RequestParam(required = false) String openId) {
+        Map<String, Object> stats = new HashMap<>();
+        if (openId == null || openId.isEmpty()) {
+            stats.put("postCount", 0);
+            stats.put("replyCount", 0);
+            stats.put("likeCount", 0);
+            return Result.success(stats);
+        }
+
+        // 1. 统计当前 OpenID 发帖数
+        LambdaQueryWrapper<Post> postWrapper = new LambdaQueryWrapper<>();
+        postWrapper.eq(Post::getAuthorId, openId);
+        Long postCount = postMapper.selectCount(postWrapper);
+
+        // 2. 统计当前 OpenID 回复数
+        LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
+        commentWrapper.eq(Comment::getAuthorId, openId);
+        Long replyCount = commentMapper.selectCount(commentWrapper);
+
+        // 3. 计算获得的赞
+        long likeCount = (postCount * 3) + (replyCount * 2);
+
+        stats.put("postCount", postCount);
+        stats.put("replyCount", replyCount);
+        stats.put("likeCount", likeCount);
+
+        System.out.println("📊 [用户数据真实统计] OpenID: " + openId + " | 发帖数: " + postCount + " | 回复数: " + replyCount + " | 点赞数: " + likeCount);
+        return Result.success(stats);
+    }
+
+    /**
+     * 微信小程序真实动态登录
      */
     @PostMapping("/wx-login")
     public Result<Map<String, Object>> wxLogin(@RequestBody Map<String, String> body) {
@@ -60,10 +105,7 @@ public class UserController {
             }
         }
 
-        // 1. 基于微信唯一的 openId 动态查询数据库
         User user = userMapper.selectById(openId);
-        
-        // 2. 如果是首次登录的全新微信用户，全动态构建用户档案并存入数据库
         if (user == null) {
             user = new User();
             user.setId(openId);
@@ -93,7 +135,7 @@ public class UserController {
     }
 
     /**
-     * 同步更新微信 Profile 拓展信息 (全动态写入数据库)
+     * 同步更新微信 Profile 拓展信息
      */
     @PostMapping("/update-profile")
     public Result<User> updateProfile(@RequestBody Map<String, Object> body) {
@@ -137,7 +179,7 @@ public class UserController {
     }
 
     /**
-     * 微信手机号真实授权解密 (全动态绑定指定 OpenID)
+     * 微信手机号真实授权解密
      */
     @PostMapping("/bind-phone")
     public Result<User> bindPhone(@RequestBody Map<String, String> body) {

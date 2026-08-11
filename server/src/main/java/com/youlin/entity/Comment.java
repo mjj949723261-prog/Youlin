@@ -15,6 +15,7 @@ public class Comment {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long postId;
+    private String authorId;
     private String authorName;
     private String authorAvatar;
     private String content;
@@ -36,6 +37,8 @@ public class Comment {
     public void setId(Long id) { this.id = id; }
     public Long getPostId() { return postId; }
     public void setPostId(Long postId) { this.postId = postId; }
+    public String getAuthorId() { return authorId; }
+    public void setAuthorId(String authorId) { this.authorId = authorId; }
     public String getAuthorName() { return authorName; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
     public String getAuthorAvatar() { return authorAvatar; }

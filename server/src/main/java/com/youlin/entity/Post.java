@@ -11,6 +11,7 @@ import lombok.Data;
 public class Post {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String authorId;
     private String authorName;
     private String authorAvatar;
     private String building;
@@ -31,6 +32,8 @@ public class Post {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getAuthorId() { return authorId; }
+    public void setAuthorId(String authorId) { this.authorId = authorId; }
     public String getAuthorName() { return authorName; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
     public String getAuthorAvatar() { return authorAvatar; }
