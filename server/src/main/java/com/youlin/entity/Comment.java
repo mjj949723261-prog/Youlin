@@ -14,6 +14,7 @@ import java.util.List;
 public class Comment {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String siteId; // 多站点隔离核心字段 site_id
     private Long postId;
     private String authorId;
     private String authorName;
@@ -29,12 +30,13 @@ public class Comment {
     @TableLogic
     private Integer deleted;
 
-    // 贴吧嵌套子回复
     @TableField(exist = false)
     private List<Comment> subReplies;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getSiteId() { return siteId; }
+    public void setSiteId(String siteId) { this.siteId = siteId; }
     public Long getPostId() { return postId; }
     public void setPostId(Long postId) { this.postId = postId; }
     public String getAuthorId() { return authorId; }

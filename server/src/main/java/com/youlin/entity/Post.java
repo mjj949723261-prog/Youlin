@@ -11,6 +11,7 @@ import lombok.Data;
 public class Post {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String siteId; // 多站点隔离核心字段 site_id
     private String authorId;
     private String authorName;
     private String authorAvatar;
@@ -25,13 +26,14 @@ public class Post {
     private String videoUrl;
     private String videoPoster;
     private String publishTime;
-    private String communityId;
 
     @TableLogic
     private Integer deleted;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getSiteId() { return siteId; }
+    public void setSiteId(String siteId) { this.siteId = siteId; }
     public String getAuthorId() { return authorId; }
     public void setAuthorId(String authorId) { this.authorId = authorId; }
     public String getAuthorName() { return authorName; }
@@ -60,8 +62,6 @@ public class Post {
     public void setVideoPoster(String videoPoster) { this.videoPoster = videoPoster; }
     public String getPublishTime() { return publishTime; }
     public void setPublishTime(String publishTime) { this.publishTime = publishTime; }
-    public String getCommunityId() { return communityId; }
-    public void setCommunityId(String communityId) { this.communityId = communityId; }
     public Integer getDeleted() { return deleted; }
     public void setDeleted(Integer deleted) { this.deleted = deleted; }
 }

@@ -3,8 +3,10 @@ package com.youlin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.youlin.common.Result;
 import com.youlin.entity.Comment;
+import com.youlin.entity.Post;
 import com.youlin.entity.User;
 import com.youlin.mapper.CommentMapper;
+import com.youlin.mapper.PostMapper;
 import com.youlin.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
@@ -19,6 +21,9 @@ public class CommentController {
 
     @Autowired
     private CommentMapper commentMapper;
+
+    @Autowired
+    private PostMapper postMapper;
 
     @Autowired
     private UserMapper userMapper;
@@ -52,6 +57,14 @@ public class CommentController {
             return Result.error(400, "回复内容或附件媒体不能为空");
         }
 
+        // 绑定帖子所属的 siteId 站点
+        Post post = postMapper.selectById(comment.getPostId());
+        if (post != null && StringUtils.hasText(post.getSiteId())) {
+            comment.setSiteId(post.getSiteId());
+        } else if (!StringUtils.hasText(comment.getSiteId())) {
+            comment.setSiteId("site_comm_001");
+        }
+
         if (StringUtils.hasText(comment.getAuthorId())) {
             User user = userMapper.selectById(comment.getAuthorId());
             if (user != null) {
@@ -82,13 +95,10 @@ public class CommentController {
         }
 
         commentMapper.insert(comment);
-        System.out.println("💬 [数据库成功写入评论回复] 帖子ID: " + comment.getPostId() + " | 回复人: " + comment.getAuthorName() + " | 内容: " + comment.getContent());
+        System.out.println("💬 [多站点数据库成功写入评论] SiteID: " + comment.getSiteId() + " | 帖子ID: " + comment.getPostId() + " | 回复人: " + comment.getAuthorName());
         return Result.success("回复成功！", comment);
     }
 
-    /**
-     * 删除我的评论楼层
-     */
     @DeleteMapping("/comments/{id}")
     public Result<String> deleteComment(@PathVariable Long id, @RequestParam(required = false) String openId) {
         Comment comment = commentMapper.selectById(id);
