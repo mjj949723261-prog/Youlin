@@ -3,32 +3,45 @@
     <view class="modal-card" @click.stop>
       <view class="modal-header">
         <text class="app-icon">🏡</text>
-        <text class="modal-title">获取微信公开信息</text>
-        <text class="modal-sub">【这儿有邻】申请获取您的微信公开信息（昵称、头像、地区）用于完善社区住户名片</text>
+        <text class="modal-title">完善社区个人资料</text>
+        <text class="modal-sub">依照微信官方规则，请点击选择您的微信头像与昵称</text>
       </view>
 
       <view class="modal-body">
-        <view class="profile-preview-box">
-          <image class="preview-avatar" :src="communityState.currentUser.avatar || defaultAvatar" mode="aspectFill" />
-          <view class="preview-info">
-            <text class="preview-name">{{ communityState.currentUser.nickname || '微信住户' }}</text>
-            <text class="preview-tip">点击下方按钮授权同步真实微信资料</text>
-          </view>
+        <!-- 1. 微信原生选择头像按钮 (open-type="chooseAvatar") -->
+        <view class="avatar-choose-box">
+          <button class="choose-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+            <image class="preview-avatar" :src="currentAvatar" mode="aspectFill" />
+            <view class="camera-badge">
+              <text class="camera-icon">📷</text>
+            </view>
+          </button>
+          <text class="choose-tip">点击授权微信真实头像</text>
+        </view>
+
+        <!-- 2. 微信原生键盘快捷填昵称输入框 (type="nickname") -->
+        <view class="input-group">
+          <text class="input-label">社区昵称</text>
+          <input
+            type="nickname"
+            v-model="inputNickname"
+            class="nickname-input"
+            placeholder="点击调起微信快捷昵称"
+            @blur="onNicknameBlur"
+          />
         </view>
       </view>
 
       <view class="modal-footer">
-        <button class="skip-btn" @click="onSkip">暂不授权</button>
-        <button class="auth-btn" @click="onAuthorizeUserProfile">
-          <text class="wx-auth-icon">💬</text>
-          <text class="auth-btn-text">一键授权微信资料</text>
-        </button>
+        <button class="skip-btn" @click="onSkip">暂不设置</button>
+        <button class="save-btn" @click="onSaveProfile">确认保存资料</button>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
+import { ref, watch } from 'vue'
 import { useCommunityStore, state as communityState } from '@/store/community'
 
 const props = defineProps({
@@ -42,41 +55,53 @@ const emit = defineEmits(['close', 'saved'])
 const communityStore = useCommunityStore()
 
 const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250'
+const currentAvatar = ref(defaultAvatar)
+const inputNickname = ref('')
+
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    currentAvatar.value = communityState.currentUser.avatar || defaultAvatar
+    inputNickname.value = communityState.currentUser.nickname || '微信住户'
+    console.log('📌 [UserProfileModal 弹窗已拉起]，当前初始化头像与昵称:', currentAvatar.value, inputNickname.value)
+  }
+})
+
+// 接收微信官方原生 chooseAvatar 相册/拍照选中结果
+const onChooseAvatar = (e) => {
+  console.log('✅ [微信原生 chooseAvatar 事件触发]:', e)
+  if (e.detail && e.detail.avatarUrl) {
+    currentAvatar.value = e.detail.avatarUrl
+    console.log('📷 [成功选中微信真实头像 TempPath]:', e.detail.avatarUrl)
+    uni.showToast({ title: '已选中微信头像', icon: 'success' })
+  }
+}
+
+// 接收微信官方原生 nickname 输入框焦点离开/键盘选择结果
+const onNicknameBlur = (e) => {
+  console.log('✅ [微信原生 nickname 输入框失焦事件]:', e)
+  if (e.detail && e.detail.value) {
+    inputNickname.value = e.detail.value
+    console.log('🏷️ [成功填入微信真实昵称]:', e.detail.value)
+  }
+}
 
 const onSkip = () => {
   emit('close')
 }
 
-// 核心手势触发：用户点击直接调用 uni.getUserProfile 调起微信官方授权弹窗！
-const onAuthorizeUserProfile = () => {
-  console.log('🚀 [准备调用 uni.getUserProfile 授权接口]...')
-  uni.getUserProfile({
-    desc: '用于完善社区住户名片资料',
-    success: async (res) => {
-      console.log('✅ [uni.getUserProfile 微信官方返回全量数据成功]:', res)
-      console.log('👤 [userInfo 属性拆解]:', JSON.stringify(res.userInfo, null, 2))
-      
-      if (res.userInfo) {
-        uni.showLoading({ title: '正在同步微信资料...' })
-        const { nickName, avatarUrl, city, province, gender } = res.userInfo
-        console.log('📌 [解析到的微信昵称]:', nickName)
-        console.log('📌 [解析到的微信头像]:', avatarUrl)
-        console.log('📌 [解析到的微信地区]:', province, city)
+// 保存用户亲自授权与挑选的头像与昵称，同步至数据库与 Pinia store
+const onSaveProfile = async () => {
+  const name = inputNickname.value.trim() || '微信住户'
+  const avatar = currentAvatar.value
+  
+  console.log('🚀 [确认保存用户资料]:', name, avatar)
+  uni.showLoading({ title: '保存中...' })
+  await communityStore.syncWxProfile(name, avatar)
+  uni.hideLoading()
 
-        await communityStore.syncWxProfile(nickName, avatarUrl)
-        
-        uni.hideLoading()
-        uni.showToast({ title: '微信资料成功同步！', icon: 'success' })
-        emit('saved', res.userInfo)
-        emit('close')
-      }
-    },
-    fail: (err) => {
-      console.error('❌ [uni.getUserProfile 微信官方授权失败或取消]:', err)
-      uni.showToast({ title: '未完成授权，可稍后在设置中同步', icon: 'none' })
-      emit('close')
-    }
-  })
+  uni.showToast({ title: '个人资料已更新！', icon: 'success' })
+  emit('saved', { name, avatar })
+  emit('close')
 }
 </script>
 
@@ -130,47 +155,98 @@ const onAuthorizeUserProfile = () => {
 .modal-sub {
   font-size: 12px;
   color: #6B7280;
-  line-height: 1.5;
-  margin-top: 4px;
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
 .modal-body {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   margin-bottom: 24px;
 }
 
-.profile-preview-box {
-  background: #F0F7F4;
-  border-radius: 16px;
-  padding: 14px;
+.avatar-choose-box {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.choose-avatar-btn {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  line-height: 1;
+  overflow: visible;
+}
+
+.choose-avatar-btn::after {
+  border: none;
 }
 
 .preview-avatar {
-  width: 52px;
-  height: 52px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  border: 2px solid #10B981;
+  border: 3px solid #10B981;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
 }
 
-.preview-info {
+.camera-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background: #10B981;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.choose-tip {
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.input-group {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  gap: 8px;
 }
 
-.preview-name {
+.input-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.nickname-input {
+  width: 100%;
+  height: 44px;
+  background: #F3F4F6;
+  border-radius: 14px;
+  padding: 0 16px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   color: #111827;
-}
-
-.preview-tip {
-  font-size: 11px;
-  color: #059669;
+  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -191,28 +267,16 @@ const onAuthorizeUserProfile = () => {
   border: none;
 }
 
-.auth-btn {
+.save-btn {
   flex: 2;
-  background: linear-gradient(135deg, #07C160 0%, #059669 100%);
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 800;
   border-radius: 20px;
   padding: 12px 0;
   line-height: 1.4;
   border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-shadow: 0 4px 14px rgba(7, 193, 96, 0.35);
-}
-
-.wx-auth-icon {
-  font-size: 16px;
-  color: #FFFFFF;
-}
-
-.auth-btn-text {
-  font-size: 14px;
-  font-weight: 800;
-  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
 </style>
