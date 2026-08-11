@@ -62,7 +62,34 @@
     <scroll-view scroll-y class="mine-scroll-body">
       
       <view class="menu-group">
-        <!-- 1. 用户认证 -->
+        <!-- 1. 绑定手机号 (放在用户认证上方，点击直接调起微信原生获取当前微信手机号) -->
+        <view class="menu-item">
+          <view class="menu-left">
+            <text class="menu-icon">📱</text>
+            <text class="menu-label">绑定手机号</text>
+          </view>
+
+          <view class="menu-right">
+            <template v-if="communityState.isLoggedIn && communityState.currentUser.phone">
+              <text class="bound-phone-text">{{ communityState.currentUser.phone }}</text>
+              <text class="verified-badge">已绑定</text>
+            </template>
+
+            <button
+              v-else-if="communityState.isLoggedIn"
+              class="wx-phone-btn"
+              open-type="getPhoneNumber"
+              @getphonenumber="onGetPhoneNumber"
+            >
+              <text class="phone-btn-text">获取微信手机号</text>
+            </button>
+
+            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 2. 用户认证 -->
         <view class="menu-item" @click="onNavToAuth">
           <view class="menu-left">
             <text class="menu-icon">🛡️</text>
@@ -75,7 +102,7 @@
           </view>
         </view>
 
-        <!-- 2. 我的消息 -->
+        <!-- 3. 我的消息 -->
         <view class="menu-item" @click="onNavToNotice">
           <view class="menu-left">
             <text class="menu-icon">🔔</text>
@@ -88,7 +115,7 @@
           </view>
         </view>
 
-        <!-- 3. 系统设置 -->
+        <!-- 4. 系统设置 -->
         <view class="menu-item" @click="onOpenSettings">
           <view class="menu-left">
             <text class="menu-icon">⚙️</text>
@@ -181,6 +208,25 @@ const getRoleBadgeClass = (roleCode) => {
   return 'badge-owner'
 }
 
+// 微信原生 getPhoneNumber 回调：直接获取并绑定当前微信真实手机号！
+const onGetPhoneNumber = async (e) => {
+  console.log('✅ [微信原生 getPhoneNumber 事件触发]:', e)
+  uni.showLoading({ title: '获取手机号中...' })
+  let phoneStr = ''
+  let phoneCode = ''
+  if (e.detail) {
+    if (e.detail.phoneNumber || e.detail.purePhoneNumber) phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
+    if (e.detail.code) phoneCode = e.detail.code
+  }
+  const boundPhone = await communityStore.bindWxPhone(phoneCode, phoneStr)
+  uni.hideLoading()
+  if (boundPhone) {
+    uni.showToast({ title: `已成功绑定: ${boundPhone}`, icon: 'success' })
+  } else {
+    uni.showToast({ title: '获取手机号失败', icon: 'none' })
+  }
+}
+
 // 用户认证触发
 const onNavToAuth = () => {
   if (!communityState.isLoggedIn) {
@@ -202,7 +248,7 @@ const onNavToFavorite = () => {
   }
   uni.showModal({
     title: '⭐ 我的收藏夹',
-    content: '1. 社区服务中心关于成立业委会通知\n2. 5栋邻居张先生【求助找猫】\n3. 闲置电梯卡转让',
+    content: '1. 社区服务中心关于成立业委会通知\n2. 5栋邻居张先生【求助找猫】\n3. 闲置电梯卡转查',
     showCancel: false
   })
 }
@@ -505,6 +551,24 @@ const onNavToMyPosts = () => {
 .menu-right { display: flex; align-items: center; gap: 6px; }
 .menu-sub-tip { font-size: 12px; color: #9CA3AF; }
 .bound-phone-text { font-size: 13px; font-weight: 700; color: #059669; }
+
+.verified-badge {
+  font-size: 10px; font-weight: 700; color: #065F46; background: #D1FAE5; padding: 2px 6px; border-radius: 4px;
+}
+
+.wx-phone-btn {
+  background: linear-gradient(135deg, #07C160 0%, #059669 100%);
+  padding: 4px 10px;
+  border-radius: 12px;
+  line-height: 1.4;
+  border: none;
+}
+
+.phone-btn-text {
+  font-size: 11px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
 
 .unread-badge {
   font-size: 11px; font-weight: 700; color: #EF4444; background: #FEE2E2; padding: 2px 8px; border-radius: 10px;
