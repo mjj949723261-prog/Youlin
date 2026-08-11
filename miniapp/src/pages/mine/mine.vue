@@ -150,7 +150,7 @@ onShow(() => {
   fetchUserStats()
 })
 
-// 解析 7 大角色的中文 Tag
+// 解析 7 大角色的标准中文 Tag（规范统一）
 const getRoleBadgeText = (user) => {
   const code = user.roleCode
   if (code === 'COMMUNITY_ADMIN') return '🛡️ 社区管理员'
@@ -159,7 +159,7 @@ const getRoleBadgeText = (user) => {
   if (code === 'MERCHANT') return '🏪 商户'
   if (code === 'TENANT') return '🔑 租客'
   if (code === 'GUEST') return '👤 游客'
-  return user.roleTag || '🏠 业主'
+  return '🏠 业主'
 }
 
 // 解析 7 大角色的专属 Badge 样式类
