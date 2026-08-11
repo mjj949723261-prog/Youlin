@@ -14,7 +14,7 @@ export const state = reactive({
   currentUser: {
     id: 'usr_guest',
     nickname: hasLoggedInStorage ? (uni.getStorageSync('userName') || '微信用户_8888') : '未登录游客',
-    avatar: hasLoggedInStorage ? (uni.getStorageSync('userAvatar') || 'https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132') : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
+    avatar: hasLoggedInStorage ? (uni.getStorageSync('userAvatar') || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250') : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
     building: hasLoggedInStorage ? '5栋' : '未绑定门牌',
     room: hasLoggedInStorage ? '302' : '',
     isOwner: hasLoggedInStorage,
@@ -47,10 +47,9 @@ export const useCommunityStore = () => {
       uni.setStorageSync('userToken', token)
     }
 
-    // 点击微信登录瞬间，全自动同步带出头像与昵称
     const defaultNickname = '微信用户_' + Math.floor(1000 + Math.random() * 9000)
     state.currentUser.nickname = (userInfo && userInfo.nickname) ? userInfo.nickname : (uni.getStorageSync('userName') || defaultNickname)
-    state.currentUser.avatar = (userInfo && userInfo.avatar) ? userInfo.avatar : (uni.getStorageSync('userAvatar') || 'https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132')
+    state.currentUser.avatar = (userInfo && userInfo.avatar) ? userInfo.avatar : (uni.getStorageSync('userAvatar') || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250')
     state.currentUser.phone = (userInfo && userInfo.phone) ? userInfo.phone : (uni.getStorageSync('userPhone') || '')
     state.currentUser.city = (userInfo && userInfo.city) ? userInfo.city : (uni.getStorageSync('userCity') || '广东·深圳')
     state.currentUser.building = '5栋'

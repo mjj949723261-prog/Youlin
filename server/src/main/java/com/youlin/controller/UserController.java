@@ -31,7 +31,7 @@ public class UserController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 微信小程序登录 (调用微信 jscode2session 换取真实 openid，同时自动生成微信专属名片与昵称)
+     * 微信小程序登录
      */
     @PostMapping("/wx-login")
     public Result<Map<String, Object>> wxLogin(@RequestBody Map<String, String> body) {
@@ -63,7 +63,7 @@ public class UserController {
             user.setId("usr_888");
             String tail = openId.length() >= 4 ? openId.substring(openId.length() - 4) : "8888";
             user.setNickname("微信邻居_" + tail);
-            user.setAvatar("https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132");
+            user.setAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250");
             user.setBuilding("5栋");
             user.setRoom("302");
             user.setIsOwner(true);
@@ -112,7 +112,7 @@ public class UserController {
     }
 
     /**
-     * 微信手机号真实授权解密 (支持微信真实 API 与模拟器调试环境平滑兼容)
+     * 微信手机号真实授权解密
      */
     @PostMapping("/bind-phone")
     public Result<User> bindPhone(@RequestBody Map<String, String> body) {
