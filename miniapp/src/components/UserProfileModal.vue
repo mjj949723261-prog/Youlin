@@ -29,7 +29,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { useCommunityStore, state as communityState } from '@/store/community'
 
 const props = defineProps({
@@ -50,13 +49,20 @@ const onSkip = () => {
 
 // 核心手势触发：用户点击直接调用 uni.getUserProfile 调起微信官方授权弹窗！
 const onAuthorizeUserProfile = () => {
+  console.log('🚀 [准备调用 uni.getUserProfile 授权接口]...')
   uni.getUserProfile({
     desc: '用于完善社区住户名片资料',
     success: async (res) => {
+      console.log('✅ [uni.getUserProfile 微信官方返回全量数据成功]:', res)
+      console.log('👤 [userInfo 属性拆解]:', JSON.stringify(res.userInfo, null, 2))
+      
       if (res.userInfo) {
         uni.showLoading({ title: '正在同步微信资料...' })
         const { nickName, avatarUrl, city, province, gender } = res.userInfo
-        
+        console.log('📌 [解析到的微信昵称]:', nickName)
+        console.log('📌 [解析到的微信头像]:', avatarUrl)
+        console.log('📌 [解析到的微信地区]:', province, city)
+
         await communityStore.syncWxProfile(nickName, avatarUrl)
         
         uni.hideLoading()
@@ -66,7 +72,7 @@ const onAuthorizeUserProfile = () => {
       }
     },
     fail: (err) => {
-      console.log('用户取消授权或授权失败:', err)
+      console.error('❌ [uni.getUserProfile 微信官方授权失败或取消]:', err)
       uni.showToast({ title: '未完成授权，可稍后在设置中同步', icon: 'none' })
       emit('close')
     }
