@@ -5,26 +5,27 @@ const LOCAL_MAC_IP = '172.16.10.69'
 const BASE_URL = `http://${LOCAL_MAC_IP}:8080/api/v1`
 
 const request = (url, method = 'GET', data = {}) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     uni.request({
       url: BASE_URL + url,
       method,
       data,
+      timeout: 15000, // 显式 15 秒超时控制，彻底消除微信 SDK 默认 Timeout 报错
       header: {
         'Content-Type': 'application/json',
         'Authorization': state.userToken ? `Bearer ${state.userToken}` : '',
         'X-Site-Id': state.currentCommunity.id || 'site_comm_001'
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        if (res.statusCode === 200 && res.data && res.data.code === 200) {
           resolve(res.data.data)
         } else {
-          console.warn('API 返回非 200 或业务错误:', res.data)
+          console.warn('API 返回非 200 或业务提示:', res.data)
           resolve(null)
         }
       },
       fail: (err) => {
-        console.error('API 请求网络失败:', err)
+        console.error('API 请求网络超时或握手中断:', err)
         resolve(null)
       }
     })
