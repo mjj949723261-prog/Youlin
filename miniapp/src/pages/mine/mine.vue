@@ -11,15 +11,15 @@
           </view>
           
           <view class="user-info" @click="onOpenSettings">
+            <!-- 第一行：纯粹展示用户昵称大字 -->
             <view class="name-line">
               <text class="user-name-text">{{ communityState.currentUser.nickname }}</text>
-              <view class="role-badge-tag" :class="getRoleBadgeClass(communityState.currentUser.roleCode)">
-                <text class="role-badge-text">{{ communityState.currentUser.roleTag || '🏠 认证业主' }}</text>
-              </view>
             </view>
+            <!-- 第二行：展示 7 大角色 Tag 勋章 -->
             <view class="property-line">
-              <text class="location-icon">📍</text>
-              <text class="property-text">{{ communityStore.currentCommunity.name }} {{ communityStore.currentUser.building }} {{ communityStore.currentUser.room }}</text>
+              <view class="role-badge-tag" :class="getRoleBadgeClass(communityState.currentUser.roleCode)">
+                <text class="role-badge-text">{{ getRoleBadgeText(communityState.currentUser) }}</text>
+              </view>
               <text class="setting-hint-text">（点击进入设置）</text>
             </view>
           </view>
@@ -70,7 +70,7 @@
             <text class="menu-label">用户认证</text>
           </view>
           <view class="menu-right">
-            <text v-if="communityState.isLoggedIn" class="bound-phone-text">业主身份已认证</text>
+            <text v-if="communityState.isLoggedIn" class="bound-phone-text">身份已认证</text>
             <text v-else class="menu-sub-tip">未认证</text>
             <text class="arrow">›</text>
           </view>
@@ -150,6 +150,29 @@ onShow(() => {
   fetchUserStats()
 })
 
+// 解析 7 大角色的中文 Tag
+const getRoleBadgeText = (user) => {
+  const code = user.roleCode
+  if (code === 'COMMUNITY_ADMIN') return '🛡️ 社区管理员'
+  if (code === 'COMMITTEE_ADMIN') return '🏛️ 业委会代表'
+  if (code === 'PROPERTY_STAFF') return '🏢 物业人员'
+  if (code === 'MERCHANT') return '🏪 商户'
+  if (code === 'TENANT') return '🔑 租客'
+  if (code === 'GUEST') return '👤 游客'
+  return user.roleTag || '🏠 业主'
+}
+
+// 解析 7 大角色的专属 Badge 样式类
+const getRoleBadgeClass = (roleCode) => {
+  if (roleCode === 'COMMUNITY_ADMIN') return 'badge-gov'
+  if (roleCode === 'COMMITTEE_ADMIN') return 'badge-committee'
+  if (roleCode === 'PROPERTY_STAFF') return 'badge-property'
+  if (roleCode === 'MERCHANT') return 'badge-merchant'
+  if (roleCode === 'TENANT') return 'badge-tenant'
+  if (roleCode === 'GUEST') return 'badge-guest'
+  return 'badge-owner'
+}
+
 // 用户认证触发
 const onNavToAuth = () => {
   if (!communityState.isLoggedIn) {
@@ -157,8 +180,8 @@ const onNavToAuth = () => {
     return
   }
   uni.showModal({
-    title: '🛡️ 社区用户认证',
-    content: `绑定社区：${communityStore.currentCommunity.name}\n门牌地址：${communityStore.currentUser.building} ${communityStore.currentUser.room}\n认证状态：已通过真实微信与手机号业主认证`,
+    title: '🛡️ 用户身份认证',
+    content: `绑定小区：${communityStore.currentCommunity.name}\n当前角色：${getRoleBadgeText(communityStore.currentUser)}\n认证状态：已通过官方实名身份认证`,
     showCancel: false
   })
 }
@@ -197,7 +220,13 @@ const onOpenSettings = () => {
   }
 
   uni.showActionSheet({
-    itemList: ['📷 修改微信头像 (chooseAvatar)', '🏷️ 修改微信昵称 (nickname)', '📱 关联微信手机号', '🌐 同步微信地区资料 (getUserProfile)'],
+    itemList: [
+      '📷 修改微信头像 (chooseAvatar)',
+      '🏷️ 修改微信昵称 (nickname)',
+      '📱 关联微信手机号',
+      '🎭 切换体验角色 (7大角色视图)',
+      '🌐 同步微信地区资料 (getUserProfile)'
+    ],
     success: async (res) => {
       if (res.tapIndex === 0) {
         uni.showModal({
@@ -214,18 +243,33 @@ const onOpenSettings = () => {
       } else if (res.tapIndex === 2) {
         uni.showToast({ title: '已关联验证微信手机号', icon: 'success' })
       } else if (res.tapIndex === 3) {
+        onSwitchRoleDialog()
+      } else if (res.tapIndex === 4) {
         onCallGetUserProfile()
       }
     }
   })
 }
 
-const getRoleBadgeClass = (roleCode) => {
-  if (roleCode === 'COMMUNITY_ADMIN') return 'badge-gov'
-  if (roleCode === 'COMMITTEE_ADMIN') return 'badge-committee'
-  if (roleCode === 'PROPERTY_STAFF') return 'badge-property'
-  if (roleCode === 'MERCHANT') return 'badge-merchant'
-  return 'badge-owner'
+// 切换 7 大角色体验
+const onSwitchRoleDialog = () => {
+  uni.showActionSheet({
+    itemList: [
+      '🛡️ 社区管理员',
+      '🏛️ 业委会代表',
+      '🏠 业主',
+      '🏢 物业人员',
+      '🏪 商户',
+      '🔑 租客',
+      '👤 游客'
+    ],
+    success: (res) => {
+      const roles = ['COMMUNITY_ADMIN', 'COMMITTEE_ADMIN', 'OWNER', 'PROPERTY_STAFF', 'MERCHANT', 'TENANT', 'GUEST']
+      const targetRole = roles[res.tapIndex]
+      communityStore.currentUser.roleCode = targetRole
+      uni.showToast({ title: `已成功切换视角为: ${getRoleBadgeText(communityStore.currentUser)}`, icon: 'none' })
+    }
+  })
 }
 
 const onCallGetUserProfile = async () => {
@@ -324,7 +368,6 @@ const onNavToMyPosts = () => {
 .name-line {
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .user-name-text {
@@ -333,38 +376,34 @@ const onNavToMyPosts = () => {
   color: #FFFFFF;
 }
 
+.property-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .role-badge-tag {
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: 12px;
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: inline-flex;
+  align-items: center;
 }
 
 .role-badge-text {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   color: #FFFFFF;
 }
 
-.badge-gov { background: rgba(220, 38, 38, 0.4); }
-.badge-committee { background: rgba(217, 119, 6, 0.4); }
-.badge-property { background: rgba(37, 99, 235, 0.4); }
-.badge-merchant { background: rgba(147, 51, 234, 0.4); }
-.badge-owner { background: rgba(255, 255, 255, 0.2); }
-
-.property-line {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.location-icon { font-size: 12px; }
-
-.property-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #E6F4EA;
-}
+.badge-gov { background: rgba(220, 38, 38, 0.5); }
+.badge-committee { background: rgba(217, 119, 6, 0.5); }
+.badge-property { background: rgba(37, 99, 235, 0.5); }
+.badge-merchant { background: rgba(147, 51, 234, 0.5); }
+.badge-tenant { background: rgba(16, 185, 129, 0.5); }
+.badge-guest { background: rgba(107, 114, 128, 0.5); }
+.badge-owner { background: rgba(255, 255, 255, 0.25); }
 
 .setting-hint-text {
   font-size: 11px;
