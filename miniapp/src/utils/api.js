@@ -11,7 +11,7 @@ const request = (url, method = 'GET', data = {}) => {
       header: {
         'Content-Type': 'application/json',
         'Authorization': state.userToken ? `Bearer ${state.userToken}` : '',
-        'X-Site-Id': state.currentCommunity.id || 'site_comm_001' // 🔥 全局请求自动附带站点 ID Header
+        'X-Site-Id': state.currentCommunity.id || 'site_comm_001'
       },
       success: (res) => {
         if (res.statusCode === 200 && res.data.code === 200) {
@@ -32,6 +32,11 @@ const request = (url, method = 'GET', data = {}) => {
 // 微信授权登录 code2session
 export const apiWxLogin = (code) => {
   return request('/user/wx-login', 'POST', { code })
+}
+
+// 演示/体验一键切换 5 大角色 API
+export const apiSwitchRole = (openId, roleCode) => {
+  return request('/user/switch-role', 'POST', { openId, roleCode })
 }
 
 // 获取用户发帖数与回复数真实统计
@@ -56,7 +61,7 @@ export const apiBindPhone = (phoneCode, phone = '') => {
   })
 }
 
-// 获取多站点社区帖子列表 (支持根据当前选中的 siteId 数据隔离)
+// 获取多站点社区帖子列表
 export const apiGetPostList = (categoryKey = 'ALL', siteId = '') => {
   const currentSiteId = siteId || state.currentCommunity.id || 'site_comm_001'
   return request(`/posts?category=${categoryKey}&siteId=${currentSiteId}`, 'GET')
@@ -67,7 +72,7 @@ export const apiGetPostDetail = (id) => {
   return request(`/posts/${id}`, 'GET')
 }
 
-// 发布新帖子 (带上当前小区的站点 siteId)
+// 发布新帖子 (附带当前站点 siteId)
 export const apiCreatePost = (postData) => {
   const currentSiteId = state.currentCommunity.id || 'site_comm_001'
   return request('/posts', 'POST', {
@@ -80,7 +85,7 @@ export const apiCreatePost = (postData) => {
   })
 }
 
-// 删除动态帖子 (需校验作者 OpenID)
+// 删除动态帖子 (校验作者或管理员)
 export const apiDeletePost = (id) => {
   const currentOpenId = state.currentUser.openId || state.currentUser.id
   return request(`/posts/${id}?openId=${currentOpenId}`, 'DELETE')
@@ -109,7 +114,7 @@ export const apiDeleteComment = (commentId) => {
   return request(`/comments/${commentId}?openId=${currentOpenId}`, 'DELETE')
 }
 
-// 提交违规举报 (自动附带站点 siteId)
+// 提交违规举报
 export const apiReportContent = (reportData) => {
   const currentSiteId = state.currentCommunity.id || 'site_comm_001'
   return request('/reports', 'POST', {
@@ -117,4 +122,15 @@ export const apiReportContent = (reportData) => {
     reporterId: state.currentUser.openId || state.currentUser.id,
     ...reportData
   })
+}
+
+// 管理员调阅待处理举报工单列表
+export const apiGetPendingReports = (siteId = '') => {
+  const currentSiteId = siteId || state.currentCommunity.id || 'site_comm_001'
+  return request(`/reports/pending?siteId=${currentSiteId}`, 'GET')
+}
+
+// 管理员一键处置违规工单
+export const apiResolveReport = (reportId, action = 'DELETE_POST') => {
+  return request(`/reports/${reportId}/resolve?action=${action}`, 'POST')
 }

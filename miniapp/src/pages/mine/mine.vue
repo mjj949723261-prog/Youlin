@@ -1,6 +1,6 @@
 <template>
   <view class="mine-container">
-    <!-- 1. 顶部用户 Profile 卡片 Header (微信原生授权头像与昵称) -->
+    <!-- 1. 顶部用户 Profile 卡片 Header (含角色 Badge 与权限展示) -->
     <view class="user-profile-card" :style="{ paddingTop: (statusBarHeight + 12) + 'px' }">
       <view class="user-row">
         
@@ -29,15 +29,14 @@
                 @blur="onNicknameBlur"
                 @change="onNicknameChange"
               />
-              <view class="verified-tag">
-                <text class="shield-icon">🛡️</text>
-                <text class="tag-text">业主认证</text>
+              <view class="role-badge-tag" :class="getRoleBadgeClass(communityState.currentUser.roleCode)">
+                <text class="role-badge-text">{{ communityState.currentUser.roleTag || '🏠 认证业主' }}</text>
               </view>
             </view>
             <view class="property-line" @click="onSwitchProperty">
               <text class="location-icon">📍</text>
               <text class="property-text">{{ communityStore.currentCommunity.name }} {{ communityStore.currentUser.building }} {{ communityStore.currentUser.room }}</text>
-              <text class="switch-arrow">⇌ 切换</text>
+              <text class="switch-arrow">⇌ 切换站点</text>
             </view>
           </template>
 
@@ -56,7 +55,7 @@
         </view>
       </view>
 
-      <!-- 2. 真实数据库交互数据联动栏 (清理点赞关联项，纯粹清晰) -->
+      <!-- 2. 数据库真实统计 & 角色切换快捷入口 -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.postCount : '--' }}</text>
@@ -68,13 +67,19 @@
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.replyCount : '--' }}</text>
           <text class="stat-label">收到回复</text>
         </view>
+        <view class="stat-divider"></view>
+
+        <view class="stat-item" @click="onTriggerSwitchRole">
+          <text class="stat-num">🎭</text>
+          <text class="stat-label">切换演示角色</text>
+        </view>
       </view>
     </view>
 
-    <!-- 3. 主体功能分组区 (平滑滚动) -->
+    <!-- 3. 主体功能区 (管理工作台 + 菜单) -->
     <scroll-view scroll-y class="mine-scroll-body">
       
-      <!-- 游客专属快速登录卡片条 -->
+      <!-- 游客专属登录卡片 -->
       <view v-if="!communityState.isLoggedIn" class="guest-banner-card" @click="onTriggerLogin">
         <view class="guest-banner-left">
           <text class="banner-icon">💬</text>
@@ -86,11 +91,56 @@
         <text class="banner-action-btn">立即登录</text>
       </view>
 
-      <!-- 业主身份与微信绑定 -->
+      <!-- 🔥🔥🔥 核心：针对不同管理角色的专属【⚙️ 社区管理工作台】 -->
+      <view v-if="communityState.isLoggedIn && isAdminRole" class="admin-console-card">
+        <view class="console-header">
+          <view class="console-title-box">
+            <text class="console-icon">⚙️</text>
+            <text class="console-title">社区管理工作台</text>
+          </view>
+          <text class="console-scope-tag">{{ getScopeText }}</text>
+        </view>
+
+        <view class="admin-grid">
+          <!-- 1. 违规举报工单处理 (所有管理员) -->
+          <view class="admin-grid-item" @click="onOpenReportManage">
+            <view class="grid-icon-box bg-red">
+              <text class="grid-icon">🚨</text>
+              <text v-if="pendingReportCount > 0" class="badge-dot">{{ pendingReportCount }}</text>
+            </view>
+            <text class="grid-label">违规举报处分</text>
+          </view>
+
+          <!-- 2. 业主房产认证审核 (物业与业委会) -->
+          <view class="admin-grid-item" @click="onOpenHouseAudit">
+            <view class="grid-icon-box bg-emerald">
+              <text class="grid-icon">🏡</text>
+            </view>
+            <text class="grid-label">房产认证审核</text>
+          </view>
+
+          <!-- 3. 小区站点开通配置 (仅行政社区管理者) -->
+          <view v-if="isCommunityAdmin" class="admin-grid-item" @click="onOpenSiteManage">
+            <view class="grid-icon-box bg-blue">
+              <text class="grid-icon">🏢</text>
+            </view>
+            <text class="grid-label">站点开通配置</text>
+          </view>
+
+          <!-- 4. 官方通知公告发布 (物业/业委会/社区) -->
+          <view class="admin-grid-item" @click="onOpenPublishNotice">
+            <view class="grid-icon-box bg-amber">
+              <text class="grid-icon">📢</text>
+            </view>
+            <text class="grid-label">发布官方通告</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 微信授权与身份绑定 -->
       <view class="menu-group">
         <text class="group-title">微信授权与身份绑定</text>
 
-        <!-- 1. 微信原生头像与昵称快捷设置提醒 -->
         <view class="menu-item">
           <view class="menu-left">
             <text class="menu-icon">👤</text>
@@ -103,7 +153,6 @@
           </view>
         </view>
 
-        <!-- 2. 微信手机号一键授权绑定 (getPhoneNumber 原生组件) -->
         <view class="menu-item">
           <view class="menu-left">
             <text class="menu-icon">📱</text>
@@ -130,7 +179,6 @@
           </view>
         </view>
 
-        <!-- 3. 微信 getUserProfile 扩展资料授权 -->
         <view class="menu-item" @click="onCallGetUserProfile">
           <view class="menu-left">
             <text class="menu-icon">🌐</text>
@@ -144,7 +192,7 @@
         </view>
       </view>
 
-      <!-- 4. 商业化增值/高级功能入口 -->
+      <!-- 社区服务与档案 -->
       <view class="menu-group">
         <view class="group-header-row">
           <text class="group-title">社区服务与档案</text>
@@ -175,7 +223,7 @@
         </view>
       </view>
 
-      <!-- 5. 账号管理 -->
+      <!-- 账号管理 -->
       <view class="menu-group">
         <text class="group-title">账号与安全</text>
 
@@ -206,18 +254,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useCommunityStore, state as communityState } from '@/store/community'
-import { apiGetUserStats } from '@/utils/api'
+import { apiGetUserStats, apiGetPendingReports, apiResolveReport } from '@/utils/api'
 
 const communityStore = useCommunityStore()
 const statusBarHeight = ref(44)
 const inputNickname = ref('')
+const pendingReportCount = ref(0)
 
 const stats = ref({
   postCount: 0,
   replyCount: 0
+})
+
+// 计算是否为具备管理工作台的角色
+const isAdminRole = computed(() => {
+  const code = communityState.currentUser.roleCode
+  return code === 'COMMUNITY_ADMIN' || code === 'COMMITTEE_ADMIN' || code === 'PROPERTY_STAFF'
+})
+
+const isCommunityAdmin = computed(() => {
+  return communityState.currentUser.roleCode === 'COMMUNITY_ADMIN'
+})
+
+const getScopeText = computed(() => {
+  const code = communityState.currentUser.roleCode
+  if (code === 'COMMUNITY_ADMIN') return '🌐 辖区多站点全局管辖'
+  if (code === 'COMMITTEE_ADMIN') return '🏛️ 金翠园小区业委会专属'
+  if (code === 'PROPERTY_STAFF') return '🏢 金翠物业服务中心专属'
+  return '🏠 单站点专属'
 })
 
 const fetchUserStats = async () => {
@@ -225,9 +292,18 @@ const fetchUserStats = async () => {
     const targetOpenId = communityStore.currentUser.openId || communityStore.currentUser.id
     if (targetOpenId && targetOpenId !== 'usr_guest') {
       const data = await apiGetUserStats(targetOpenId)
-      if (data) {
-        stats.value = data
-      }
+      if (data) stats.value = data
+    }
+  }
+}
+
+// 调阅待处理举报工单
+const fetchPendingReports = async () => {
+  if (isAdminRole.value) {
+    const siteId = isCommunityAdmin.value ? 'ALL' : communityStore.currentCommunity.id
+    const reports = await apiGetPendingReports(siteId)
+    if (reports) {
+      pendingReportCount.value = reports.length
     }
   }
 }
@@ -239,115 +315,199 @@ onMounted(() => {
   }
   inputNickname.value = communityStore.currentUser.nickname || '微信用户'
   fetchUserStats()
+  fetchPendingReports()
 })
 
 onShow(() => {
   fetchUserStats()
+  fetchPendingReports()
 })
 
-// 1. 微信原生选择头像回调 (@chooseavatar)
+// 🎭 演示一键切换 5 大角色弹窗
+const onTriggerSwitchRole = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
+
+  const roleList = [
+    { code: 'COMMUNITY_ADMIN', name: '🛡️ 社区行政管理者 (跨小区通管)' },
+    { code: 'COMMITTEE_ADMIN', name: '🏛️ 业委会代表 (本小区公示监督)' },
+    { code: 'PROPERTY_STAFF', name: '🏢 物业服务管家 (本小区工单审核)' },
+    { code: 'MERCHANT', name: '🏪 周边便民商户 (优惠优惠发布)' },
+    { code: 'OWNER', name: '🏠 认证业主 (5栋302 居民)' }
+  ]
+
+  uni.showActionSheet({
+    itemList: roleList.map(r => r.name),
+    success: async (res) => {
+      const targetRole = roleList[res.tapIndex]
+      uni.showLoading({ title: '切换角色中...' })
+      const ok = await communityStore.switchUserRole(targetRole.code)
+      uni.hideLoading()
+      if (ok) {
+        uni.showToast({ title: `角色已切换为: ${targetRole.name.split(' ')[0]}`, icon: 'none' })
+        fetchPendingReports()
+      }
+    }
+  })
+}
+
+// ⚙️ 处分违规举报工单
+const onOpenReportManage = async () => {
+  const siteId = isCommunityAdmin.value ? 'ALL' : communityStore.currentCommunity.id
+  uni.showLoading({ title: '加载举报工单...' })
+  const reports = await apiGetPendingReports(siteId)
+  uni.hideLoading()
+
+  if (!reports || reports.length === 0) {
+    uni.showModal({
+      title: '🚨 违规举报管理',
+      content: '当前小区暂无待处理的违规举报工单，社区风控环境良好！',
+      showCancel: false
+    })
+    return
+  }
+
+  const items = reports.map(r => `帖子ID:${r.postId || '未知'} [原因:${r.reason}]`)
+  uni.showActionSheet({
+    itemList: items,
+    success: (res) => {
+      const selectedReport = reports[res.tapIndex]
+      uni.showModal({
+        title: '🛡️ 违规处分下架判定',
+        content: `举报原因：${selectedReport.reason}\n被举报帖子ID：${selectedReport.postId}\n判定结果：确认违规并一键从数据库撤销删除？`,
+        confirmColor: '#DC2626',
+        success: async (mRes) => {
+          if (mRes.confirm) {
+            uni.showLoading({ title: '处分下架中...' })
+            await apiResolveReport(selectedReport.id, 'DELETE_POST')
+            uni.hideLoading()
+            uni.showToast({ title: '该违规帖子已从全网下架！', icon: 'success' })
+            fetchPendingReports()
+          }
+        }
+      })
+    }
+  })
+}
+
+// 🏡 房产认证审核
+const onOpenHouseAudit = () => {
+  uni.showModal({
+    title: '🏡 业主房产认证审核',
+    content: '待审核申请：\n1. 张三 (5栋 302) 提交不动产产证截图\n2. 李四 (2栋 101) 提交租房合同\n\n判定：已帮您一键全量审核通过并赋予【业主认证】标识！',
+    confirmText: '一键全通过',
+    success: (res) => {
+      if (res.confirm) {
+        uni.showToast({ title: '房产认证审核通过！', icon: 'success' })
+      }
+    }
+  })
+}
+
+// 🏢 站点开通配置 (仅行政社区管理者)
+const onOpenSiteManage = () => {
+  uni.showActionSheet({
+    itemList: ['➕ 一键开通新小区站点 (自动生成 site_id)', '⚙️ 配置社区管辖地图', '🔑 重新生成物业/业委会授权码'],
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        uni.showModal({
+          title: '🏢 开通新小区站点',
+          content: '请输入新小区名称：【紫竹园小区】\n系统已分配全新站点ID：site_comm_004\n对应街道社区：翠竹街道行政社区',
+          showCancel: false
+        })
+      } else {
+        uni.showToast({ title: '配置已更新', icon: 'none' })
+      }
+    }
+  })
+}
+
+// 📢 发布官方通告
+const onOpenPublishNotice = () => {
+  const roleCode = communityState.currentUser.roleCode
+  let noticeType = '物业通知'
+  if (roleCode === 'COMMUNITY_ADMIN') noticeType = '街道政务公告'
+  if (roleCode === 'COMMITTEE_ADMIN') noticeType = '业委会收益公示'
+
+  uni.showModal({
+    title: `📢 发布【${noticeType}】`,
+    content: `将以【${communityState.currentUser.roleTag}】身份向本小区全体住户推送官方通告？`,
+    success: (res) => {
+      if (res.confirm) {
+        uni.showToast({ title: '官方通告已全小区推送！', icon: 'success' })
+      }
+    }
+  })
+}
+
+const getRoleBadgeClass = (roleCode) => {
+  if (roleCode === 'COMMUNITY_ADMIN') return 'badge-gov'
+  if (roleCode === 'COMMITTEE_ADMIN') return 'badge-committee'
+  if (roleCode === 'PROPERTY_STAFF') return 'badge-property'
+  if (roleCode === 'MERCHANT') return 'badge-merchant'
+  return 'badge-owner'
+}
+
+// 微信原生回调
 const onChooseWxAvatar = (e) => {
-  console.log('📷 [微信原生 chooseAvatar 回调]:', e)
   if (e.detail && e.detail.avatarUrl) {
-    const newAvatar = e.detail.avatarUrl
-    console.log('🎉 授权拿到的微信头像临时路径:', newAvatar)
-    communityStore.syncWxProfile(null, newAvatar)
-    uni.showToast({ title: '微信头像授权设置成功！', icon: 'success' })
+    communityStore.syncWxProfile(null, e.detail.avatarUrl)
+    uni.showToast({ title: '微信头像授权成功！', icon: 'success' })
   }
 }
 
-// 2. 微信原生快捷填昵称回调 (@blur / @change)
 const onNicknameBlur = (e) => {
   const val = e.detail.value || inputNickname.value
-  console.log('🏷️ [微信原生 nickname 输入框失焦填入]:', val)
   if (val && val !== communityStore.currentUser.nickname) {
     communityStore.syncWxProfile(val, null)
-    uni.showToast({ title: `微信昵称已同步: ${val}`, icon: 'success' })
   }
 }
 
 const onNicknameChange = (e) => {
-  const val = e.detail.value
-  console.log('🏷️ [微信原生 nickname 值改变]:', val)
-  if (val) {
-    communityStore.syncWxProfile(val, null)
-  }
+  if (e.detail.value) communityStore.syncWxProfile(e.detail.value, null)
 }
 
-// 3. 微信原生 getPhoneNumber 手机号回调
 const onGetPhoneNumber = async (e) => {
-  console.log('📱 [微信原生 getPhoneNumber 回调]:', e)
-  uni.showLoading({ title: '安全绑定中...' })
-
+  uni.showLoading({ title: '绑定中...' })
   let phoneStr = ''
   let phoneCode = ''
-
   if (e.detail) {
-    if (e.detail.phoneNumber || e.detail.purePhoneNumber) {
-      phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
-    }
-    if (e.detail.code) {
-      phoneCode = e.detail.code
-    }
+    if (e.detail.phoneNumber || e.detail.purePhoneNumber) phoneStr = e.detail.phoneNumber || e.detail.purePhoneNumber
+    if (e.detail.code) phoneCode = e.detail.code
   }
-
   const boundPhone = await communityStore.bindWxPhone(phoneCode, phoneStr)
   uni.hideLoading()
-  uni.showToast({ title: `微信手机号 ${boundPhone} 绑定成功！`, icon: 'success' })
+  uni.showToast({ title: `绑定成功: ${boundPhone}`, icon: 'success' })
 }
 
-// 4. 微信原生 getUserProfile 授权
 const onCallGetUserProfile = async () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
-  uni.showLoading({ title: '拉取微信资料中...' })
+  if (!communityState.isLoggedIn) { onTriggerLogin(); return }
+  uni.showLoading({ title: '同步中...' })
   const res = await communityStore.fetchUserProfile()
   uni.hideLoading()
-  if (res) {
-    uni.showToast({ title: '微信地区与资料已授权同步！', icon: 'success' })
-  } else {
-    uni.showToast({ title: '请直接点击上方头像与昵称进行授权设置', icon: 'none' })
-  }
+  if (res) uni.showToast({ title: '微信资料已授权！', icon: 'success' })
 }
 
-const onAvatarClick = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-  }
-}
-
-const onTriggerLogin = () => {
-  communityStore.openLoginModal()
-  uni.switchTab({
-    url: '/pages/index/index'
-  })
-}
-
-const onResetLogin = () => {
-  communityStore.clearLoginState()
-  stats.value = { postCount: 0, replyCount: 0 }
-}
+const onAvatarClick = () => { if (!communityState.isLoggedIn) onTriggerLogin() }
+const onTriggerLogin = () => { communityStore.openLoginModal(); uni.switchTab({ url: '/pages/index/index' }) }
+const onResetLogin = () => { communityStore.clearLoginState(); stats.value = { postCount: 0, replyCount: 0 } }
 
 const onSwitchProperty = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
+  if (!communityState.isLoggedIn) { onTriggerLogin(); return }
   uni.showActionSheet({
-    itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.building + ')'),
+    itemList: communityStore.myCommunities.map(c => c.name + ' (' + c.id + ')'),
     success: (res) => {
       communityStore.switchCommunity(communityStore.myCommunities[res.tapIndex])
+      fetchUserStats()
+      fetchPendingReports()
     }
   })
 }
 
 const onNavToMyPosts = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
+  if (!communityState.isLoggedIn) { onTriggerLogin(); return }
   uni.showModal({
     title: '📝 我的发帖与回复记录',
     content: `根据数据库真实统计：您在【这儿有邻】共发布了 ${stats.value.postCount} 条动态，收到/参与了 ${stats.value.replyCount} 条楼层回复。`,
@@ -356,10 +516,7 @@ const onNavToMyPosts = () => {
 }
 
 const onNavToProperty = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
+  if (!communityState.isLoggedIn) { onTriggerLogin(); return }
   uni.showModal({
     title: '🏢 我的房产认证',
     content: `当前绑定：${communityStore.currentCommunity.name} ${communityStore.currentUser.building} ${communityStore.currentUser.room}\n身份状态：🛡️ 业主已认证`,
@@ -368,10 +525,7 @@ const onNavToProperty = () => {
 }
 
 const onNavToNotice = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
+  if (!communityState.isLoggedIn) { onTriggerLogin(); return }
   uni.showModal({
     title: '🔔 消息通知中心',
     content: '1. 张先生 回复了您的【邻里求助】帖子\n2. 社区服务中心成立通知',
@@ -462,43 +616,35 @@ const onNavToNotice = () => {
   font-size: 18px;
   font-weight: 800;
   color: #FFFFFF;
-  width: 140px;
+  width: 130px;
   height: 28px;
   background: rgba(255, 255, 255, 0.15);
   padding: 0 8px;
   border-radius: 6px;
 }
 
-.guest-name {
-  font-size: 20px;
-  font-weight: 800;
-  color: #FFFFFF;
-}
-
-.verified-tag {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
+.role-badge-tag {
   padding: 3px 8px;
   border-radius: 12px;
+  backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.guest-tag {
-  background: rgba(255, 255, 255, 0.25);
-  padding: 3px 8px;
-  border-radius: 12px;
-}
-
-.shield-icon {
-  font-size: 11px;
-}
-
-.tag-text {
+.role-badge-text {
   font-size: 11px;
   font-weight: 700;
+  color: #FFFFFF;
+}
+
+.badge-gov { background: rgba(220, 38, 38, 0.4); }
+.badge-committee { background: rgba(217, 119, 6, 0.4); }
+.badge-property { background: rgba(37, 99, 235, 0.4); }
+.badge-merchant { background: rgba(147, 51, 234, 0.4); }
+.badge-owner { background: rgba(255, 255, 255, 0.2); }
+
+.guest-name {
+  font-size: 20px;
+  font-weight: 800;
   color: #FFFFFF;
 }
 
@@ -510,23 +656,6 @@ const onNavToNotice = () => {
   padding: 4px 10px;
   border-radius: 14px;
   width: fit-content;
-}
-
-.login-guide-btn {
-  background: rgba(255, 255, 255, 0.25);
-  padding: 4px 10px;
-  border-radius: 14px;
-  width: fit-content;
-}
-
-.guide-text {
-  font-size: 12px;
-  font-weight: 700;
-  color: #FFFFFF;
-}
-
-.location-icon {
-  font-size: 12px;
 }
 
 .property-text {
@@ -545,7 +674,7 @@ const onNavToNotice = () => {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
   border-radius: 16px;
-  padding: 14px 10px;
+  padding: 12px 10px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -560,7 +689,7 @@ const onNavToNotice = () => {
 }
 
 .stat-num {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   color: #FFFFFF;
 }
@@ -583,51 +712,100 @@ const onNavToNotice = () => {
   box-sizing: border-box;
 }
 
-.guest-banner-card {
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
-  border: 1px solid #6EE7B7;
-  border-radius: 16px;
-  padding: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* ⚙️ 社区管理工作台 */
+.admin-console-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 16px;
   margin-bottom: 14px;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
+  border: 1px solid #A7F3D0;
 }
 
-.guest-banner-left {
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.console-title-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
-.banner-icon {
-  font-size: 24px;
+.console-icon {
+  font-size: 18px;
 }
 
-.banner-texts {
-  display: flex;
-  flex-direction: column;
-}
-
-.banner-main {
-  font-size: 14px;
+.console-title {
+  font-size: 15px;
   font-weight: 800;
   color: #065F46;
 }
 
-.banner-sub {
+.console-scope-tag {
   font-size: 11px;
-  color: #047857;
+  color: #059669;
+  background: #ECFDF5;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
 }
 
-.banner-action-btn {
-  font-size: 12px;
-  font-weight: 800;
-  color: #FFFFFF;
-  background: #059669;
-  padding: 6px 12px;
+.admin-grid {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.admin-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.grid-icon-box {
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bg-red { background: #FEE2E2; }
+.bg-emerald { background: #D1FAE5; }
+.bg-blue { background: #DBEAFE; }
+.bg-amber { background: #FEF3C7; }
+
+.grid-icon {
+  font-size: 20px;
+}
+
+.badge-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #DC2626;
+  color: #FFF;
+  font-size: 10px;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
 }
 
 .menu-group {
@@ -684,72 +862,23 @@ const onNavToNotice = () => {
   gap: 12px;
 }
 
-.menu-icon {
-  font-size: 20px;
-}
-
-.menu-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.menu-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.menu-sub-tip {
-  font-size: 12px;
-  color: #9CA3AF;
-}
-
-.bound-phone-text {
-  font-size: 13px;
-  font-weight: 700;
-  color: #059669;
-}
+.menu-icon { font-size: 20px; }
+.menu-label { font-size: 15px; font-weight: 700; color: #111827; }
+.menu-right { display: flex; align-items: center; gap: 6px; }
+.menu-sub-tip { font-size: 12px; color: #9CA3AF; }
+.bound-phone-text { font-size: 13px; font-weight: 700; color: #059669; }
 
 .verified-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: #065F46;
-  background: #D1FAE5;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 10px; font-weight: 700; color: #065F46; background: #D1FAE5; padding: 2px 6px; border-radius: 4px;
 }
 
 .wx-phone-btn {
   background: linear-gradient(135deg, #07C160 0%, #059669 100%);
-  padding: 4px 10px;
-  border-radius: 12px;
-  line-height: 1.4;
-  border: none;
-  box-shadow: 0 2px 8px rgba(7, 193, 96, 0.3);
+  padding: 4px 10px; border-radius: 12px; line-height: 1.4; border: none;
 }
 
-.phone-btn-text {
-  font-size: 11px;
-  font-weight: 800;
-  color: #FFFFFF;
-}
-
-.unread-badge {
-  font-size: 11px;
-  font-weight: 700;
-  color: #EF4444;
-  background: #FEE2E2;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.arrow {
-  font-size: 16px;
-  color: #9CA3AF;
-}
-
-.bottom-space {
-  height: 80px;
-}
+.phone-btn-text { font-size: 11px; font-weight: 800; color: #FFFFFF; }
+.unread-badge { font-size: 11px; font-weight: 700; color: #EF4444; background: #FEE2E2; padding: 2px 8px; border-radius: 10px; }
+.arrow { font-size: 16px; color: #9CA3AF; }
+.bottom-space { height: 80px; }
 </style>
