@@ -56,7 +56,7 @@
         </view>
       </view>
 
-      <!-- 2. 真实数据库交互数据联动栏 (P0 核心打通) -->
+      <!-- 2. 真实数据库交互数据联动栏 (清理点赞关联项，纯粹清晰) -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.postCount : '--' }}</text>
@@ -67,12 +67,6 @@
         <view class="stat-item" @click="onNavToMyPosts('REPLIES')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.replyCount : '--' }}</text>
           <text class="stat-label">收到回复</text>
-        </view>
-        <view class="stat-divider"></view>
-
-        <view class="stat-item" @click="onNavToMyFav">
-          <text class="stat-num">{{ communityState.isLoggedIn ? stats.likeCount : '--' }}</text>
-          <text class="stat-label">获得的点赞</text>
         </view>
       </view>
     </view>
@@ -223,8 +217,7 @@ const inputNickname = ref('')
 
 const stats = ref({
   postCount: 0,
-  replyCount: 0,
-  likeCount: 0
+  replyCount: 0
 })
 
 const fetchUserStats = async () => {
@@ -334,7 +327,7 @@ const onTriggerLogin = () => {
 
 const onResetLogin = () => {
   communityStore.clearLoginState()
-  stats.value = { postCount: 0, replyCount: 0, likeCount: 0 }
+  stats.value = { postCount: 0, replyCount: 0 }
 }
 
 const onSwitchProperty = () => {
@@ -358,18 +351,6 @@ const onNavToMyPosts = () => {
   uni.showModal({
     title: '📝 我的发帖与回复记录',
     content: `根据数据库真实统计：您在【这儿有邻】共发布了 ${stats.value.postCount} 条动态，收到/参与了 ${stats.value.replyCount} 条楼层回复。`,
-    showCancel: false
-  })
-}
-
-const onNavToMyFav = () => {
-  if (!communityState.isLoggedIn) {
-    onTriggerLogin()
-    return
-  }
-  uni.showModal({
-    title: '💖 获得的点赞数据',
-    content: `根据数据库真实计算：您的邻里互动共获得了 ${stats.value.likeCount} 个赞。`,
     showCancel: false
   })
 }

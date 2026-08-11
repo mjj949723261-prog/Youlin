@@ -42,7 +42,7 @@ public class UserController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 获取指定用户的真实发帖数、回复数、获得点赞数全数据统计
+     * 获取指定用户的真实发帖数与回复数全数据统计 (已彻底清理点赞/收藏逻辑)
      */
     @GetMapping("/stats")
     public Result<Map<String, Object>> getUserStats(@RequestParam(required = false) String openId) {
@@ -50,7 +50,6 @@ public class UserController {
         if (openId == null || openId.isEmpty()) {
             stats.put("postCount", 0);
             stats.put("replyCount", 0);
-            stats.put("likeCount", 0);
             return Result.success(stats);
         }
 
@@ -64,14 +63,10 @@ public class UserController {
         commentWrapper.eq(Comment::getAuthorId, openId);
         Long replyCount = commentMapper.selectCount(commentWrapper);
 
-        // 3. 计算获得的赞
-        long likeCount = (postCount * 3) + (replyCount * 2);
-
         stats.put("postCount", postCount);
         stats.put("replyCount", replyCount);
-        stats.put("likeCount", likeCount);
 
-        System.out.println("📊 [用户数据真实统计] OpenID: " + openId + " | 发帖数: " + postCount + " | 回复数: " + replyCount + " | 点赞数: " + likeCount);
+        System.out.println("📊 [用户数据真实统计] OpenID: " + openId + " | 发帖数: " + postCount + " | 回复数: " + replyCount);
         return Result.success(stats);
     }
 

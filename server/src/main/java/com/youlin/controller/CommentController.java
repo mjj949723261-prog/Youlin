@@ -25,14 +25,12 @@ public class CommentController {
 
     @GetMapping("/posts/{postId}/comments")
     public Result<List<Comment>> getPostComments(@PathVariable Long postId) {
-        // 1. 查询所有主楼层评论 (parentCommentId IS NULL)
         LambdaQueryWrapper<Comment> mainWrapper = new LambdaQueryWrapper<>();
         mainWrapper.eq(Comment::getPostId, postId)
                    .isNull(Comment::getParentCommentId)
                    .orderByAsc(Comment::getFloorNum);
         List<Comment> mainComments = commentMapper.selectList(mainWrapper);
 
-        // 2. 为每个主楼层查询对应的 subReplies 嵌套子回复
         for (Comment mainComment : mainComments) {
             LambdaQueryWrapper<Comment> subWrapper = new LambdaQueryWrapper<>();
             subWrapper.eq(Comment::getPostId, postId)
@@ -76,7 +74,6 @@ public class CommentController {
             comment.setPublishTime("刚刚");
         }
 
-        // 计算楼层数
         if (comment.getParentCommentId() == null) {
             LambdaQueryWrapper<Comment> countWrapper = new LambdaQueryWrapper<>();
             countWrapper.eq(Comment::getPostId, comment.getPostId()).isNull(Comment::getParentCommentId);
@@ -87,5 +84,26 @@ public class CommentController {
         commentMapper.insert(comment);
         System.out.println("💬 [数据库成功写入评论回复] 帖子ID: " + comment.getPostId() + " | 回复人: " + comment.getAuthorName() + " | 内容: " + comment.getContent());
         return Result.success("回复成功！", comment);
+    }
+
+    /**
+     * 删除我的评论楼层
+     */
+    @DeleteMapping("/comments/{id}")
+    public Result<String> deleteComment(@PathVariable Long id, @RequestParam(required = false) String openId) {
+        Comment comment = commentMapper.selectById(id);
+        if (comment == null) {
+            return Result.error(404, "该回复已被删除");
+        }
+
+        if (StringUtils.hasText(openId) && StringUtils.hasText(comment.getAuthorId())) {
+            if (!openId.equals(comment.getAuthorId())) {
+                return Result.error(403, "只能删除您本人发表的回复");
+            }
+        }
+
+        commentMapper.deleteById(id);
+        System.out.println("🗑️ [数据库成功删除评论] Comment ID: " + id);
+        return Result.success("评论回复已删除！", "OK");
     }
 }

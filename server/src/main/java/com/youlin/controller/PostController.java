@@ -59,7 +59,6 @@ public class PostController {
             return Result.error(400, "发布内容不能为空");
         }
 
-        // 如果关联了作者 OpenID，自动同步关联用户的最新头像与昵称
         if (StringUtils.hasText(post.getAuthorId())) {
             User user = userMapper.selectById(post.getAuthorId());
             if (user != null) {
@@ -91,5 +90,26 @@ public class PostController {
         postMapper.insert(post);
         System.out.println("📝 [数据库成功写入新发帖] ID: " + post.getId() + " | 作者: " + post.getAuthorName() + " | 内容: " + post.getContent());
         return Result.success("动态发布成功！", post);
+    }
+
+    /**
+     * 删除我的动态帖子 (安全鉴权，防止越权)
+     */
+    @DeleteMapping("/{id}")
+    public Result<String> deletePost(@PathVariable Long id, @RequestParam(required = false) String openId) {
+        Post post = postMapper.selectById(id);
+        if (post == null) {
+            return Result.error(404, "该动态已被删除或不存在");
+        }
+
+        if (StringUtils.hasText(openId) && StringUtils.hasText(post.getAuthorId())) {
+            if (!openId.equals(post.getAuthorId())) {
+                return Result.error(403, "只能删除您本人发布的邻里动态");
+            }
+        }
+
+        postMapper.deleteById(id);
+        System.out.println("🗑️ [数据库成功删除动态帖子] Post ID: " + id);
+        return Result.success("动态已成功删除！", "OK");
     }
 }

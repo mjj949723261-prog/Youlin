@@ -1,6 +1,6 @@
 <template>
   <view class="post-card" @click="onCardClick">
-    <!-- 发帖人基本信息 -->
+    <!-- 发帖人基本信息与操作按钮 -->
     <view class="user-row">
       <view class="user-info">
         <image class="avatar" :src="post.authorAvatar || post.avatar || defaultAvatar" mode="aspectFill" />
@@ -13,6 +13,24 @@
           </view>
           <text class="publish-time">{{ post.publishTime }}</text>
         </view>
+      </view>
+
+      <!-- 右侧操作区：如果是作者本人显示【删除】，否则显示【举报】 -->
+      <view class="action-box" @click.stop>
+        <text
+          v-if="isMyPost"
+          class="action-btn delete-btn"
+          @click="onDeletePost"
+        >
+          🗑️ 删除
+        </text>
+        <text
+          v-else
+          class="action-btn report-btn"
+          @click="onReportPost"
+        >
+          🚨 举报
+        </text>
       </view>
     </view>
 
@@ -66,6 +84,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import { state as communityState } from '@/store/community'
+import { apiDeletePost, apiReportContent } from '@/utils/api'
 
 const props = defineProps({
   post: {
@@ -74,36 +94,78 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'refresh'])
 
 const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
 const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600'
 
-// 智能安全解析后端返回的 images (支持逗号分隔的字符串或数组)
+// 判断是否为作者本人发布的动态
+const isMyPost = computed(() => {
+  if (!communityState.isLoggedIn) return false
+  const currentOpenId = communityState.currentUser.openId || communityState.currentUser.id
+  return props.post && props.post.authorId && props.post.authorId === currentOpenId
+})
+
+// 智能安全解析后端返回的 images
 const parsedImages = computed(() => {
   if (!props.post) return []
-  
   const imgs = props.post.images || props.post.singleImg
   if (!imgs) return []
-  
-  if (Array.isArray(imgs)) {
-    return imgs.filter(Boolean)
-  }
-  
-  if (typeof imgs === 'string') {
-    return imgs.split(',').map(s => s.trim()).filter(Boolean)
-  }
-  
+  if (Array.isArray(imgs)) return imgs.filter(Boolean)
+  if (typeof imgs === 'string') return imgs.split(',').map(s => s.trim()).filter(Boolean)
   return []
 })
 
-// 在列表 Feed 流中，多图最多展示前 3 张 (保持列表卡片紧凑整洁)
 const displayMultiImages = computed(() => {
   return parsedImages.value.slice(0, 3)
 })
 
 const onCardClick = () => {
   emit('click')
+}
+
+// 动态删除触发
+const onDeletePost = () => {
+  uni.showModal({
+    title: '🗑️ 删除动态提醒',
+    content: '确定要彻底删除这条邻里动态吗？删除后将不可恢复。',
+    confirmColor: '#DC2626',
+    success: async (res) => {
+      if (res.confirm) {
+        uni.showLoading({ title: '删除中...' })
+        const resDel = await apiDeletePost(props.post.id)
+        uni.hideLoading()
+        if (resDel) {
+          uni.showToast({ title: '动态已成功删除！', icon: 'success' })
+          emit('refresh')
+        }
+      }
+    }
+  })
+}
+
+// 违规举报触发
+const onReportPost = () => {
+  uni.showActionSheet({
+    itemList: ['垃圾广告营销', '涉嫌违规/敏感内容', '人身攻击或不文明用语', '虚假诈骗信息'],
+    success: async (res) => {
+      const reasons = ['垃圾广告营销', '涉嫌违规/敏感内容', '人身攻击或不文明用语', '虚假诈骗信息']
+      const selectedReason = reasons[res.tapIndex]
+      
+      uni.showLoading({ title: '提交举报中...' })
+      await apiReportContent({
+        postId: props.post.id,
+        reason: selectedReason
+      })
+      uni.hideLoading()
+      
+      uni.showModal({
+        title: '🚨 举报已提交',
+        content: `感谢您的监督！已收到对该帖子的【${selectedReason}】举报，社区管理员将优先核查并处理。`,
+        showCancel: false
+      })
+    }
+  })
 }
 
 const getRoleTagClass = (roleType) => {
@@ -200,6 +262,29 @@ const previewImages = (urls, currentIdx) => {
   font-size: 11px;
   color: #9CA3AF;
   margin-top: 2px;
+}
+
+.action-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.delete-btn {
+  color: #DC2626;
+  background-color: #FEE2E2;
+}
+
+.report-btn {
+  color: #D97706;
+  background-color: #FEF3C7;
 }
 
 .content-row {

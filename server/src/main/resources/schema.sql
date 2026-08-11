@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     gender INT DEFAULT 0
 );
 
--- 3. 帖子表 (加入 author_id 字段精准关联微信用户)
+-- 3. 帖子表 (包含 author_id)
 CREATE TABLE IF NOT EXISTS forum_post (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     author_id VARCHAR(64),
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS forum_post (
     deleted INT DEFAULT 0
 );
 
--- 4. 评论跟帖楼层表 (加入 author_id 字段精准关联微信用户)
+-- 4. 评论跟帖楼层表 (包含 author_id)
 CREATE TABLE IF NOT EXISTS forum_comment (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     post_id BIGINT NOT NULL,
@@ -58,4 +58,15 @@ CREATE TABLE IF NOT EXISTS forum_comment (
     reply_to_user VARCHAR(100),
     publish_time VARCHAR(50),
     deleted INT DEFAULT 0
+);
+
+-- 5. 违规内容举报记录表
+CREATE TABLE IF NOT EXISTS forum_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT,
+    comment_id BIGINT,
+    reporter_id VARCHAR(64),
+    reason VARCHAR(255),
+    report_time VARCHAR(50),
+    status INT DEFAULT 0
 );

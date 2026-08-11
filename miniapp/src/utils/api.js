@@ -33,12 +33,12 @@ export const apiWxLogin = (code) => {
   return request('/user/wx-login', 'POST', { code })
 }
 
-// 获取用户发帖数/回复数/获赞数真实统计
+// 获取用户发帖数与回复数真实统计
 export const apiGetUserStats = (openId) => {
   return request(`/user/stats?openId=${openId}`, 'GET')
 }
 
-// 更新用户微信 Profile 扩展资料 (附带 openId 传输)
+// 更新用户微信 Profile 扩展资料
 export const apiUpdateProfile = (profileData) => {
   return request('/user/update-profile', 'POST', {
     openId: state.currentUser.openId || state.currentUser.id,
@@ -46,7 +46,7 @@ export const apiUpdateProfile = (profileData) => {
   })
 }
 
-// 微信手机号授权解密 (附带 openId 传输)
+// 微信手机号授权解密
 export const apiBindPhone = (phoneCode, phone = '') => {
   return request('/user/bind-phone', 'POST', {
     openId: state.currentUser.openId || state.currentUser.id,
@@ -76,6 +76,12 @@ export const apiCreatePost = (postData) => {
   })
 }
 
+// 删除动态帖子 (需校验作者 OpenID)
+export const apiDeletePost = (id) => {
+  const currentOpenId = state.currentUser.openId || state.currentUser.id
+  return request(`/posts/${id}?openId=${currentOpenId}`, 'DELETE')
+}
+
 // 获取评论列表
 export const apiGetComments = (postId) => {
   return request(`/posts/${postId}/comments`, 'GET')
@@ -92,3 +98,17 @@ export const apiCreateComment = (commentData) => {
 }
 
 export const apiAddComment = apiCreateComment
+
+// 删除评论楼层
+export const apiDeleteComment = (commentId) => {
+  const currentOpenId = state.currentUser.openId || state.currentUser.id
+  return request(`/comments/${commentId}?openId=${currentOpenId}`, 'DELETE')
+}
+
+// 提交违规举报
+export const apiReportContent = (reportData) => {
+  return request('/reports', 'POST', {
+    reporterId: state.currentUser.openId || state.currentUser.id,
+    ...reportData
+  })
+}

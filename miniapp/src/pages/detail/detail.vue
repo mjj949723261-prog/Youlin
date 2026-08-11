@@ -30,6 +30,24 @@
             </view>
             <text class="post-time">楼主 · 发布于 {{ post.publishTime }}</text>
           </view>
+
+          <!-- 右侧操作区：如果是作者本人显示【删除】，否则显示【举报】 -->
+          <view class="action-box">
+            <text
+              v-if="isMyPost"
+              class="action-btn delete-btn"
+              @click="onDeleteMainPost"
+            >
+              🗑️ 删除
+            </text>
+            <text
+              v-else
+              class="action-btn report-btn"
+              @click="onReportMainPost"
+            >
+              🚨 举报
+            </text>
+          </view>
         </view>
 
         <!-- 帖子完整正文 -->
@@ -118,7 +136,17 @@
                 </view>
                 <text class="comment-time">{{ comment.publishTime }}</text>
               </view>
-              <text class="reply-action-btn" @click="setReplyTarget(comment)">回复</text>
+
+              <view class="comment-actions">
+                <text
+                  v-if="isMyComment(comment)"
+                  class="action-btn delete-btn"
+                  @click="onDeleteCommentItem(comment.id)"
+                >
+                  🗑️ 删除
+                </text>
+                <text class="reply-action-btn" @click="setReplyTarget(comment)">回复</text>
+              </view>
             </view>
 
             <view class="comment-text-box">
@@ -203,7 +231,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { chooseAndCompressImages, chooseAndCompressVideo } from '@/utils/media'
-import { apiGetPostDetail, apiGetComments, apiAddComment } from '@/utils/api'
+import { apiGetPostDetail, apiGetComments, apiAddComment, apiDeletePost, apiDeleteComment, apiReportContent } from '@/utils/api'
+import { state as communityState } from '@/store/community'
 
 const statusBarHeight = ref(20)
 const postId = ref(null)
@@ -219,6 +248,20 @@ const defaultVideoPoster = 'https://images.unsplash.com/photo-1504148455328-c376
 const post = ref({})
 const postImages = ref([])
 const commentList = ref([])
+
+// 判断当前帖子是否由我发布
+const isMyPost = computed(() => {
+  if (!communityState.isLoggedIn) return false
+  const currentOpenId = communityState.currentUser.openId || communityState.currentUser.id
+  return post.value && post.value.authorId && post.value.authorId === currentOpenId
+})
+
+// 判断某条评论是否由我发布
+const isMyComment = (commentItem) => {
+  if (!communityState.isLoggedIn) return false
+  const currentOpenId = communityState.currentUser.openId || communityState.currentUser.id
+  return commentItem && commentItem.authorId && commentItem.authorId === currentOpenId
+}
 
 // 加载帖子详情及盖楼回复
 const loadPostData = async (id) => {
@@ -255,6 +298,72 @@ onMounted(() => {
 const canSend = computed(() => {
   return inputContent.value.trim().length > 0 || commentMedia.value.path !== ''
 })
+
+// 主贴删除
+const onDeleteMainPost = () => {
+  uni.showModal({
+    title: '🗑️ 删除动态提醒',
+    content: '确定要彻底删除这条邻里动态吗？',
+    confirmColor: '#DC2626',
+    success: async (res) => {
+      if (res.confirm) {
+        uni.showLoading({ title: '删除中...' })
+        const resDel = await apiDeletePost(postId.value)
+        uni.hideLoading()
+        if (resDel) {
+          uni.showToast({ title: '动态已成功删除！', icon: 'success' })
+          setTimeout(() => {
+            onBack()
+          }, 800)
+        }
+      }
+    }
+  })
+}
+
+// 评论回复删除
+const onDeleteCommentItem = (commentId) => {
+  uni.showModal({
+    title: '🗑️ 删除回复提醒',
+    content: '确定要删除这条回复吗？',
+    confirmColor: '#DC2626',
+    success: async (res) => {
+      if (res.confirm) {
+        uni.showLoading({ title: '删除中...' })
+        const resDel = await apiDeleteComment(commentId)
+        uni.hideLoading()
+        if (resDel) {
+          uni.showToast({ title: '回复已删除！', icon: 'success' })
+          loadPostData(postId.value)
+        }
+      }
+    }
+  })
+}
+
+// 主贴违规举报
+const onReportMainPost = () => {
+  uni.showActionSheet({
+    itemList: ['垃圾广告营销', '涉嫌违规/敏感内容', '人身攻击或不文明用语', '虚假诈骗信息'],
+    success: async (res) => {
+      const reasons = ['垃圾广告营销', '涉嫌违规/敏感内容', '人身攻击或不文明用语', '虚假诈骗信息']
+      const selectedReason = reasons[res.tapIndex]
+      
+      uni.showLoading({ title: '提交举报中...' })
+      await apiReportContent({
+        postId: Number(postId.value),
+        reason: selectedReason
+      })
+      uni.hideLoading()
+      
+      uni.showModal({
+        title: '🚨 举报已提交',
+        content: `感谢您的监督！已收到对该帖子的【${selectedReason}】举报，社区管理员将优先核查并处理。`,
+        showCancel: false
+      })
+    }
+  })
+}
 
 const onBack = () => {
   const pages = getCurrentPages()
@@ -322,7 +431,6 @@ const clearCommentMedia = () => {
   commentMedia.value = { type: null, path: '' }
 }
 
-// 真正写入数据库的跟帖盖楼回复
 const onSendComment = async () => {
   if (!canSend.value) return
 
@@ -332,8 +440,6 @@ const onSendComment = async () => {
   try {
     await apiAddComment({
       postId: Number(postId.value),
-      authorName: '我 (李先生)',
-      authorAvatar: defaultAvatar,
       content: text,
       image: commentMedia.value.type === 'IMAGE' ? commentMedia.value.path : '',
       video: commentMedia.value.type === 'VIDEO' ? commentMedia.value.path : '',
@@ -347,8 +453,6 @@ const onSendComment = async () => {
     inputContent.value = ''
     clearReplyTarget()
     clearCommentMedia()
-    
-    // 重新加载贴吧楼层列表
     loadPostData(postId.value)
 
   } catch (e) {
@@ -428,7 +532,7 @@ const onSendComment = async () => {
 .author-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   margin-bottom: 14px;
 }
 
@@ -442,6 +546,8 @@ const onSendComment = async () => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  margin-left: 10px;
 }
 
 .name-line {
@@ -476,6 +582,29 @@ const onSendComment = async () => {
 .post-time {
   font-size: 12px;
   color: #9CA3AF;
+}
+
+.action-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.delete-btn {
+  color: #DC2626;
+  background-color: #FEE2E2;
+}
+
+.report-btn {
+  color: #D97706;
+  background-color: #FEF3C7;
 }
 
 .post-content {
@@ -695,6 +824,12 @@ const onSendComment = async () => {
   color: #9CA3AF;
 }
 
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .reply-action-btn {
   font-size: 12px;
   font-weight: 600;
@@ -799,56 +934,58 @@ const onSendComment = async () => {
   background: #FFFFFF;
   padding: 10px 16px 28px 16px;
   border-top: 1px solid #F1F5F9;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  z-index: 99;
 }
 
 .reply-target-strip {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #ECFDF5;
+  background: #E6F4EA;
   padding: 4px 10px;
   border-radius: 8px;
+  margin-bottom: 8px;
 }
 
 .target-text {
   font-size: 12px;
-  font-weight: 700;
   color: #059669;
+  font-weight: 700;
 }
 
 .cancel-target {
   font-size: 11px;
-  color: #EF4444;
+  color: #6B7280;
 }
 
 .attach-media-preview {
   position: relative;
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: #000;
 }
 
 .attach-img, .attach-video {
   width: 100%;
   height: 100%;
-  border-radius: 8px;
 }
 
 .remove-attach-btn {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #FFF;
+  font-size: 10px;
   width: 16px;
   height: 16px;
-  background: #EF4444;
-  color: #FFF;
   border-radius: 50%;
-  font-size: 10px;
-  text-align: center;
-  line-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .input-row {
@@ -859,12 +996,11 @@ const onSendComment = async () => {
 
 .media-icon-btns {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .icon-btn {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .reply-input {
@@ -878,21 +1014,19 @@ const onSendComment = async () => {
 }
 
 .send-btn {
+  height: 36px;
+  border-radius: 18px;
+  background: #D1D5DB;
+  color: #FFFFFF;
   font-size: 13px;
   font-weight: 700;
-  color: #9CA3AF;
-  background: #E5E7EB;
-  border-radius: 19px;
   padding: 0 16px;
-  height: 38px;
-  line-height: 38px;
+  line-height: 36px;
   border: none;
-  margin: 0;
 }
 
 .send-btn.active {
-  color: #FFFFFF;
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
 }
 </style>
