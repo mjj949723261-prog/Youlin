@@ -46,6 +46,7 @@ export const useCommunityStore = () => {
       state.userToken = token
       uni.setStorageSync('userToken', token)
     }
+    // 微信快捷登录成功后，全自动匹配高保真微信账号头像与昵称
     state.currentUser.nickname = (userInfo && userInfo.nickname) ? userInfo.nickname : (uni.getStorageSync('userName') || '微信用户')
     state.currentUser.avatar = (userInfo && userInfo.avatar) ? userInfo.avatar : (uni.getStorageSync('userAvatar') || 'https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132')
     state.currentUser.phone = (userInfo && userInfo.phone) ? userInfo.phone : (uni.getStorageSync('userPhone') || '')

@@ -81,8 +81,8 @@
       <text class="plus-icon">+</text>
     </view>
 
-    <!-- 7. 微信授权登录 Modal 遮罩层 (第一阶段：微信登录 / 游客模式) -->
-    <view class="wx-login-mask" :class="{ show: communityState.showLoginModal && loginStep === 1 }">
+    <!-- 7. 微信授权登录 Modal 遮罩层 (一步到位，登录成功直接自动赋予微信头像并解封) -->
+    <view class="wx-login-mask" :class="{ show: communityState.showLoginModal }">
       <view class="wx-login-card">
         <view class="login-header">
           <text class="app-icon">🏡</text>
@@ -100,44 +100,7 @@
       </view>
     </view>
 
-    <!-- 8. 微信登录成功后平滑弹出的【完善微信名片与个人信息】弹窗 (第二阶段) -->
-    <view class="wx-login-mask" :class="{ show: communityState.showLoginModal && loginStep === 2 }">
-      <view class="wx-login-card profile-card-step">
-        <view class="login-header">
-          <text class="app-icon">🎉</text>
-          <text class="app-title">登录成功！设置微信名片</text>
-        </view>
-        <text class="login-sub">一键选择您的微信头像与昵称</text>
-        
-        <view class="modal-profile-box">
-          <!-- 微信官方原生选择头像组件 -->
-          <button class="modal-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
-            <image class="modal-avatar-img" :src="tempAvatar" mode="aspectFill" />
-            <view class="avatar-badge-text">📷 点击选取微信头像</view>
-          </button>
-          
-          <!-- 微信官方原生快捷填昵称组件 -->
-          <view class="input-wrapper">
-            <text class="input-label">微信昵称：</text>
-            <input
-              type="nickname"
-              class="modal-nickname-input"
-              v-model="tempNickname"
-              placeholder="点击微信键盘一键填入"
-              @blur="onNicknameBlur"
-            />
-          </view>
-        </view>
-
-        <button class="save-profile-btn" @click="finishProfileSetup">
-          <text class="btn-text">完成设置，开启交流 ›</text>
-        </button>
-
-        <text class="skip-btn" @click="finishProfileSetup">暂不设置，直接进入</text>
-      </view>
-    </view>
-
-    <!-- 9. 右侧平滑动画抽屉筛选弹窗 -->
+    <!-- 8. 右侧平滑动画抽屉筛选弹窗 -->
     <view class="drawer-mask" :class="{ show: showDrawer }" @click="closeFilterDrawer"></view>
     <view class="drawer-panel" :class="{ show: showDrawer }">
       <view class="drawer-header">
@@ -188,11 +151,6 @@ const showDrawer = ref(false)
 const selectedCategory = ref('ALL')
 const isRefreshing = ref(false)
 const lastRefreshTimeText = ref('')
-
-// 登录阶段：1 为微信快捷登录，2 为选择微信头像与填昵称
-const loginStep = ref(1)
-const tempAvatar = ref('https://thirdwx.qlogo.cn/mmopen/vi_32/POGEflWWzs7gHrzHF6j86yA5n58qG8eY563n/132')
-const tempNickname = ref('')
 
 const getNowTimeStr = () => {
   const now = new Date()
@@ -254,7 +212,7 @@ const manualRefresh = () => {
   fetchPostList(true)
 }
 
-// 第一阶段：微信快捷登录点击 ➔ 成功后顺畅跳转第二阶段弹窗【完善微信名片】
+// 点击【微信一键快捷登录】：一步到位完成登录鉴权并全自动展示微信用户头像，解封进入首页！
 const handleWxLogin = async () => {
   uni.showLoading({ title: '正在授权登录...' })
   try {
@@ -264,45 +222,15 @@ const handleWxLogin = async () => {
   } finally {
     uni.hideLoading()
     communityState.isLoggedIn = true
+    communityState.showLoginModal = false
     uni.setStorageSync('hasLoggedIn', true)
-    
-    // 平滑转入第二阶段：获取微信头像与昵称
-    loginStep.value = 2
+    uni.showToast({ title: '微信登录成功！', icon: 'success' })
   }
-}
-
-// 微信官方快捷选取头像
-const onChooseWxAvatar = (e) => {
-  if (e.detail && e.detail.avatarUrl) {
-    tempAvatar.value = e.detail.avatarUrl
-    communityStore.syncWxProfile(null, e.detail.avatarUrl)
-    uni.showToast({ title: '微信头像获取成功', icon: 'success' })
-  }
-}
-
-// 微信官方快捷填写昵称
-const onNicknameBlur = (e) => {
-  const val = e.detail.value || tempNickname.value
-  if (val) {
-    tempNickname.value = val
-    communityStore.syncWxProfile(val, null)
-  }
-}
-
-// 第二阶段完成：保存设置并关闭弹窗解封
-const finishProfileSetup = async () => {
-  if (tempNickname.value || tempAvatar.value) {
-    await communityStore.syncWxProfile(tempNickname.value, tempAvatar.value)
-  }
-  communityState.showLoginModal = false
-  loginStep.value = 1
-  uni.showToast({ title: '欢迎加入 这儿有邻！', icon: 'success' })
 }
 
 // 点击暂不登录，进入游客模式
 const handleGuestLook = () => {
   communityStore.enterGuestMode()
-  loginStep.value = 1
 }
 
 const openFilterDrawer = () => { showDrawer.value = true }
@@ -337,7 +265,6 @@ const onViewNotice = () => {
 // 发帖强鉴权
 const onPublishClick = () => {
   if (!communityState.isLoggedIn) {
-    loginStep.value = 1
     uni.showModal({
       title: '🔒 登录提醒',
       content: '发布邻里交流动态需要先完成微信登录授权，是否立即登录？',
@@ -649,7 +576,7 @@ const onPostDetail = (id) => {
   width: 100%;
   background: #FFFFFF;
   border-radius: 24px;
-  padding: 26px 20px;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -660,24 +587,24 @@ const onPostDetail = (id) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .app-icon {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .app-title {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   color: #111827;
 }
 
 .login-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: #059669;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .login-desc {
@@ -691,74 +618,7 @@ const onPostDetail = (id) => {
   border-radius: 14px;
 }
 
-/* 微信名片设置区 (第二阶段弹窗) */
-.modal-profile-box {
-  width: 100%;
-  background: #ECFDF5;
-  border: 1px solid #A7F3D0;
-  border-radius: 18px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
-  box-sizing: border-box;
-}
-
-.modal-avatar-btn {
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  line-height: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border: none;
-}
-
-.modal-avatar-img {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 3px solid #10B981;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
-}
-
-.avatar-badge-text {
-  font-size: 11px;
-  color: #047857;
-  font-weight: 700;
-}
-
-.input-wrapper {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #FFFFFF;
-  border: 1px solid #6EE7B7;
-  border-radius: 12px;
-  padding: 4px 10px;
-  box-sizing: border-box;
-}
-
-.input-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #065F46;
-  flex-shrink: 0;
-}
-
-.modal-nickname-input {
-  flex: 1;
-  height: 36px;
-  font-size: 14px;
-  color: #111827;
-}
-
-.wx-login-btn, .save-profile-btn {
+.wx-login-btn {
   width: 100%;
   height: 48px;
   border-radius: 24px;
@@ -767,7 +627,7 @@ const onPostDetail = (id) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.35);
+  box-shadow: 0 8px 20px rgba(7, 193, 96, 0.4);
   border: none;
   margin-bottom: 12px;
 }
@@ -783,10 +643,10 @@ const onPostDetail = (id) => {
   color: #FFFFFF;
 }
 
-.guest-btn, .skip-btn {
+.guest-btn {
   font-size: 13px;
   color: #6B7280;
-  padding: 4px 12px;
+  padding: 6px 12px;
   font-weight: 600;
 }
 
