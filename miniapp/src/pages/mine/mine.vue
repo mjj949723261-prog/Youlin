@@ -25,24 +25,20 @@
           </view>
         </template>
 
-        <!-- 未登录状态：默认头像 + 去登录按钮 -->
+        <!-- 未登录状态：默认头像 + “未登录社区住户”直接改成大字“去登录” -->
         <template v-else>
           <view class="avatar-box" @click="onTriggerLogin">
             <image class="avatar" :src="guestAvatar" mode="aspectFill" />
           </view>
           
-          <view class="user-info">
-            <text class="guest-title-text">未登录社区住户</text>
-            <text class="guest-sub-text">登录后参与邻里交流与社区服务</text>
+          <view class="user-info" @click="onTriggerLogin">
+            <text class="guest-title-text">去登录</text>
+            <text class="guest-sub-text">点击完成微信授权，解锁社区功能 ›</text>
           </view>
-
-          <button class="go-login-btn" @click="onTriggerLogin">
-            <text class="login-btn-text">去登录</text>
-          </button>
         </template>
       </view>
 
-      <!-- 2. 下一行数据栏：精简仅显示【我的发帖】与【收到的回复】 -->
+      <!-- 2. 下一行数据栏：仅显示【我的发帖】与【收到的回复】 -->
       <view class="stats-row">
         <view class="stat-item" @click="onNavToMyPosts('POSTS')">
           <text class="stat-num">{{ communityState.isLoggedIn ? stats.postCount : '--' }}</text>
@@ -149,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useCommunityStore, state as communityState } from '@/store/community'
 import { apiGetUserStats } from '@/utils/api'
@@ -363,29 +359,14 @@ const onNavToMyPosts = () => {
 }
 
 .guest-title-text {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: #FFFFFF;
 }
 
 .guest-sub-text {
-  font-size: 11px;
+  font-size: 12px;
   color: #E6F4EA;
-}
-
-.go-login-btn {
-  background: #FFFFFF;
-  border-radius: 18px;
-  padding: 6px 16px;
-  line-height: 1;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.login-btn-text {
-  font-size: 13px;
-  font-weight: 800;
-  color: #059669;
 }
 
 .stats-row {
