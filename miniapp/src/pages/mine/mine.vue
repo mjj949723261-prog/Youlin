@@ -53,7 +53,7 @@
       </view>
     </view>
 
-    <!-- 3. 主体滚动功能区 (用户认证、我的消息、系统设置、已登录时代的退出登录按钮) -->
+    <!-- 3. 主体滚动功能区 -->
     <scroll-view scroll-y class="mine-scroll-body">
       
       <view class="menu-group">
@@ -70,7 +70,20 @@
           </view>
         </view>
 
-        <!-- 2. 我的消息 -->
+        <!-- 2. ⭐ 我的收藏 -->
+        <view class="menu-item" @click="onNavToFavorite">
+          <view class="menu-left">
+            <text class="menu-icon">⭐</text>
+            <text class="menu-label">我的收藏</text>
+          </view>
+          <view class="menu-right">
+            <text v-if="communityState.isLoggedIn" class="menu-sub-tip">已收藏 3 条邻里帖</text>
+            <text v-else class="menu-sub-tip">未登录</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 3. 我的消息 -->
         <view class="menu-item" @click="onNavToNotice">
           <view class="menu-left">
             <text class="menu-icon">🔔</text>
@@ -83,7 +96,7 @@
           </view>
         </view>
 
-        <!-- 3. 系统设置 -->
+        <!-- 4. 系统设置 -->
         <view class="menu-item" @click="onOpenSettings">
           <view class="menu-left">
             <text class="menu-icon">⚙️</text>
@@ -153,6 +166,19 @@ const onNavToAuth = () => {
   uni.showModal({
     title: '🛡️ 社区用户认证',
     content: `绑定社区：${communityStore.currentCommunity.name}\n门牌地址：${communityStore.currentUser.building} ${communityStore.currentUser.room}\n认证状态：已通过真实微信与手机号业主认证`,
+    showCancel: false
+  })
+}
+
+// ⭐ 我的收藏触发
+const onNavToFavorite = () => {
+  if (!communityState.isLoggedIn) {
+    onTriggerLogin()
+    return
+  }
+  uni.showModal({
+    title: '⭐ 我的收藏夹',
+    content: '1. 社区服务中心关于成立业委会通知\n2. 5栋邻居张先生【求助找猫】\n3. 闲置电梯卡转让',
     showCancel: false
   })
 }
